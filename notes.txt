@@ -1,0 +1,26 @@
+Flow [dcl/min]	= Pulses * 100 / 66;			// 0	255
+Flow [m3/h]	= Flow / 10 / 1000 * 60;		// 0	1.53	
+Flow [kg/h]	= Flow * [kg/m3]			// 0	1530
+Work [J]	= Flow * deltaT * HeatCapacity		// -321453000 321453000
+Powa [Wh]	= Work / 3600				// -89292	89292
+
+Flow [dcl/min]	= Pulses * 50 / 33;			// 0	255
+Flow [m3/h]	= Flow / 1 / 500 * 3;			// 0	1.53	
+Flow [kg/h]	= Flow * [kg/m3]			// 0	1530
+Work [J]	= Flow * deltaT * HeatCapacity		// -321453000 321453000
+Powa [Wh]	= Work / 3600				// -89292	89292
+
+Pulses [Hz] [Pulses/s]
+Flow [m3/h]	= Pulses / 1 / 50 * 1 * 5 / 11 * [kg/m3];
+Powa [Wh]	= Flow * deltaT * HeatCapacity / 3600;	
+
+Flow [m3/h]	= Pulses / 10 * 1 / 11 * [kg/m3];
+Powa [Wh]	= Flow * deltaT * HeatCapacity / 3600;	
+
+Flow [m3/h]	= Pulses / 110 * [kg/m3];
+Powa [Wh]	= Flow * deltaT * HeatCapacity / 3600;	
+
+Powa [Wh]	= Pulses / 110 * [kg/m3] * deltaT * HeatCapacity / 3600;
+
+tmp = (uint32_t)Pulses * (uint32_t)[kg/m3] * (uint32_t)HeatCapacity / (uint32_t)110
+Powa [Wh]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)3600);
