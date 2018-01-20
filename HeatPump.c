@@ -123,5 +123,5 @@ POST	-> BOOT			-> OFF	-> ON_LOCKED	-> ON		-> OFF_LOCKED -|
 // - State machine	- bootup with basic error checking
 //					- Temperature error checking
 //					- Flow error checking
-//					- Presostat error checking
+//					- Manual and automatic mode
 

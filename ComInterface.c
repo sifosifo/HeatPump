@@ -9,7 +9,9 @@
 #include "HeatPump.h"
 #include "uart.h"
 
-typedef enum {RESERVED, GET_STATUS, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, READ_TANK} actions_index;
+typedef enum {RESERVED, GET_STATUS, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
+	READ_TANK, READ_ENERGY, READ_COP, 
+	READ_ACTIVE_ERRORS, READ_ERROR_HISTORY} actions_index;
 
 typedef struct
 {
@@ -185,33 +187,32 @@ uint8_t Init_ComInterface(void)
 
 ISR(PCINT0_vect)
 {
-	//UDR0='C';
 	can_custom_t msg;	
-	//can_t msg;
 	int16_t tmp;
 
 	can_get_message((can_t*)(&msg));
 	//can_get_message(&msg);
 	//can_send_message(&msg);
-	
-	switch(msg.data.byte[0])
+
+	// Even ID is request, Odd ID is reply
+	// Request ID is BASE_CAN_ID + message_id * 2
+	// Response ID is simply incremented
+	msg.id++;
+	switch(msg.id)
 	{
-	case GET_STATUS:
-		msg.id++;
+	case BASE_CAN_ID+GET_STATUS*2:		
 		msg.length = 3;
 		msg.data.byte[0] = POST_status;
 		msg.data.byte[1] = CurrentState;
 		msg.data.byte[2] = ActiveErrors;
 		can_send_message((can_t*)(&msg));
 		break;
-	case DRIVE_OUTPUT:
-		msg.id++;
+	case BASE_CAN_ID+DRIVE_OUTPUT*2:
 		msg.length = 1;
 		msg.data.byte[0] = DriveOutputsByCAN(msg.data.byte[1], msg.data.byte[2]);
 		can_send_message((can_t*)(&msg));
 		break;	
-	case READ_PRIMARY:
-		msg.id++;
+	case BASE_CAN_ID+READ_PRIMARY*2:
 		msg.length = 8;		
 		msg.data.word[0] = GetTemperature(PRIMARY_SIDE_INLET);		
 		msg.data.word[1] = GetTemperature(PRIMARY_SIDE_OUTLET);
@@ -219,8 +220,7 @@ ISR(PCINT0_vect)
 		msg.data.word[3] = GetPower_W(PRIMARY_SIDE);
 		can_send_message((can_t*)(&msg));
 		break;
-	case READ_SECONDARY:
-		msg.id++;
+	case BASE_CAN_ID+READ_SECONDARY*2:
 		msg.length = 8;
 		msg.data.word[0] = GetTemperature(SECONDARY_SIDE_INLET);
 		msg.data.word[1] = GetTemperature(SECONDARY_SIDE_OUTLET);
@@ -228,8 +228,7 @@ ISR(PCINT0_vect)
 		msg.data.word[3] = GetPower_W(SECONDARY_SIDE);
 		can_send_message((can_t*)(&msg));
 		break;
-	case READ_TANK:
-		msg.id++;
+	case BASE_CAN_ID+READ_TANK*2:
 		msg.length = 4;
 		msg.data.word[0] = GetTemperature(TANK_TOP);
 		msg.data.word[1] = GetTemperature(TANK_BOTTOM);		
