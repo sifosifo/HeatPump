@@ -17,7 +17,6 @@
 #define BOOT_DELAY 100
 
 uint8_t POST_status = 0;
-uint8_t CurrentState = BOOT;
 uint8_t ActiveErrors = 0;
 
 void Halt(void)
@@ -32,45 +31,14 @@ void Halt(void)
 	}
 }
 
-uint8_t RunPOST()	// Power On Self Test
-{
-	CurrentState = POST;
-	_delay_ms(1000);
-	if(GetFlow_dclmin(PRIMARY_SIDE)!=0) POST_status = (1<<0);
-	if(GetFlow_dclmin(SECONDARY_SIDE)!=0) POST_status += (1<<1);
-	SetRelayState(PRIMARY_CIRCULATION_PUMP, ON);
-	SetRelayState(SECONDARY_CIRCULATION_PUMP, ON);
-	_delay_ms(5000);
-	if(GetFlow_dclmin(PRIMARY_SIDE)<10) POST_status = (1<<2);
-	if(GetFlow_dclmin(SECONDARY_SIDE)<10) POST_status += (1<<3);
-	SetRelayState(PRIMARY_CIRCULATION_PUMP, OFF);
-	SetRelayState(SECONDARY_CIRCULATION_PUMP, OFF);
-	if(POST_status==0)
-	{
-		CurrentState = OFF_LOCKED;
-	}else
-	{
-		CurrentState = BOOT_ERROR;
-	}
-}
-/*
-StartCirculatingPumps(void)
-{
-	uint16_t EventTimer_s;
-
-
-	if(flow>min)
-	{	
-		store EventTimer_s 
-	}
-	EventTimer_s = GetEventTimer_s();
-}*/
-
 ProcessStateMachine_s(void)
 {
+	static uint8_t CurrentState = MACHINE_OK;
+
 	switch(CurrentState)
 	{
-		case OFF_LOCKED:
+		case MACHINE_OK:
+			Thermostat();
 			break;
 		case OFF_:
 			break;
@@ -87,10 +55,20 @@ void Thermostat(void)
 {
 	static uint8_t ThermostatState = OFF_LOCKED;
 	uint16_t EventTimer_s;
+	uint8_t PrimaryFlow_dcl;
+	uint8_t SecondaryFlow_dcl;
 
 	EventTimer_s = GetEventTimer_s();
 	switch(ThermostatState)
 	{
+		case OFF_COOLDOWN:	// Let circulating pumps run for some time after compresor was turned off
+			if(EventTimer_s>COMPRESSOR_COOLDOWN_PERIOD)
+			{
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				ThermostatState = OFF_LOCKED;
+			}
+			break;
 		case OFF_LOCKED:	// No checking for temperature, needs to stay OFF for defined period of time
 			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_OFF)
 			{
@@ -101,9 +79,33 @@ void Thermostat(void)
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
 				printf("Heatpump ON, was on for $d seconds\n", EventTimer_s);
-				ThermostatState = ON_;
+				ThermostatState = ON_FLOW_CHECKING;				
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
 				ClearEventTimer_s();
+			}
+			break;
+		case ON_FLOW_CHECKING:			
+			PrimaryFlow_dcl = GetFlow_dclmin(PRIMARY_SIDE);
+			SecondaryFlow_dcl = GetFlow_dclmin(SECONDARY_SIDE);
+			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
+			{
+				if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
+				{
+					printf("************Flow checking OK:*************\n");
+					printf("Actual/Desired flow after %ds\n", FLOW_CHECKING_TIMEOUT_PERIOD);
+					printf("Primary:\t%d/%dl/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+					printf("Secondary:\t%d/%dl/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+					SetRelayState(COMPRESSOR, 0);
+					ThermostatState = ON_LOCKED;
+				}
+			}else
+			{
+				printf("************Flow checking error:*************\n");
+				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
+				printf("Primary:\t%d/%dl/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+				printf("Secondary:\t%d/%dl/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+				Halt();
 			}
 			break;
 		case ON_LOCKED:		// No checking for temperature, needs to stay ON for defined period of time
@@ -116,8 +118,9 @@ void Thermostat(void)
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
 			{
 				printf("Heatpump OFF, was on for $d seconds\n", EventTimer_s);
-				ThermostatState = OFF_;
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);				
+				ThermostatState = OFF_COOLDOWN;
+				printf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
+				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
 			}
 			break;
@@ -172,8 +175,7 @@ int main(void)
 		- Check if flow > min in case pump is running -> FlowOK
 		- Want to start a pump? If FlowOK, store EventTimer_s -> PumpOk
 		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor			*/
-		ProcessStateMachine_s();
-		Thermostat();		
+		ProcessStateMachine_s();				
 	}	
 	return 0;
 }

@@ -226,7 +226,7 @@ ISR(PCINT0_vect)
 	case BASE_CAN_ID+GET_STATUS*2:		
 		msg.length = 3;
 		msg.data.byte[0] = POST_status;
-		msg.data.byte[1] = CurrentState;
+		msg.data.byte[1] = 0;//TODO update frame CurrentState;
 		msg.data.byte[2] = ActiveErrors;
 		can_send_message((can_t*)(&msg));
 		break;

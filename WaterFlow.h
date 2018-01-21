@@ -1,4 +1,6 @@
 
+#define	PRIMARY_MIN_FLOW	14*10
+#define	SECONDARY_MIN_FLOW	5*10
 
 // Initialise all variables
 void Init_WaterFlow(void);
