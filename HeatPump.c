@@ -20,6 +20,17 @@ uint8_t POST_status = 0;
 uint8_t CurrentState = BOOT;
 uint8_t ActiveErrors = 0;
 
+void Halt(void)
+{	// Something must went wrong
+	while(1)
+	{
+		cli();
+		DDRB = 0;
+		DDRC = 0;
+		DDRD = 0;
+	}
+}
+
 uint8_t RunPOST()	// Power On Self Test
 {
 	CurrentState = POST;
@@ -41,8 +52,8 @@ uint8_t RunPOST()	// Power On Self Test
 		CurrentState = BOOT_ERROR;
 	}
 }
-
-StartCirculatingPumps()
+/*
+StartCirculatingPumps(void)
 {
 	uint16_t EventTimer_s;
 
@@ -52,7 +63,7 @@ StartCirculatingPumps()
 		store EventTimer_s 
 	}
 	EventTimer_s = GetEventTimer_s();
-}
+}*/
 
 ProcessStateMachine_s(void)
 {
@@ -67,6 +78,40 @@ ProcessStateMachine_s(void)
 		case ERROR:
 			break;
 		default:
+			break;
+	}
+}
+
+void Thermostat(void)
+{
+	int16_t TankTemperature;
+	static uint8_t ThermostatState = 0;
+
+	TankTemperature = GetTemperature(TANK_TOP);
+	
+	switch(ThermostatState)
+	{
+		//case OFF_LOCKED:
+		//	break;
+		case OFF_:
+			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
+			{				
+				printf("Heatpump ON\n");
+				ThermostatState = ON_;
+			}
+			break;
+		//case ON_LOCKED:
+		//	break;
+		case ON_:
+			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
+			{
+				printf("Heatpump OFF\n");
+				ThermostatState = OFF_;
+			}
+			break;
+		default:
+			printf("Error Thermostat.\n");
+			Halt();
 			break;
 	}
 }
@@ -117,12 +162,15 @@ int main(void)
 		//UDR0='T';
 		
 		//SendBootupMessage(err);
-		CheckIfCANIsActive();		
+		CheckIfCANIsActive();	
+	/*
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK
 		- Check if flow > min in case pump is running -> FlowOK
 		- Want to start a pump? If FlowOK, store EventTimer_s -> PumpOk
-		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor					
+		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor			*/
+		ProcessStateMachine_s();
+		Thermostat();		
 	}	
 	return 0;
 }
@@ -132,14 +180,6 @@ POST	-> BOOT			-> OFF	-> ON_LOCKED	-> ON		-> OFF_LOCKED -|
 							^----------------------------------------------|
 								-> ERROR
 		-> BOOT_ERROR
-*/
-// TODO:
-//				- short cycling protection
-// - Thermostat
-// - Errors
-// - Parameters
-// - State machine	- bootup with basic error checking
-//					- Temperature error checking
-//					- Flow error checking
-//					- Manual and automatic mode
 
+
+*/

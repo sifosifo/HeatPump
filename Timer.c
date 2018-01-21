@@ -8,6 +8,7 @@ typedef void (*Task_1_T)(void);
 
 Task_1_T Task_1;
 uint32_t Timestamp = 0;	// 10th of s (1Tick = 100ms)
+uint16_t EventTimer_s = 0;
 
 void Init_Timer(void *Task_1000ms)
 {
@@ -26,12 +27,17 @@ ISR(TIMER1_OVF_vect)
 	TCNT1 = 65535 - 6250;	// 100ms
 //	SendBootupMessage(0xAA);
 	(*Task_1)();
-	
+	EventTimer_s++;
 }
 
 uint32_t GetTimestamp(void)
 {
 	return(Timestamp);
+}
+
+uint16_t GetEventTimer_s(void)
+{
+	return(EventTimer_s);
 }
 
 ISR(__vector_default)

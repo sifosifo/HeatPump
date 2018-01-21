@@ -25,6 +25,12 @@ struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 4, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 5, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0};
 
+uint16_t TargetTankTemperature = 25*4;
+uint16_t TargetTankTemperatureHysteresis = 5*4;
+
+#define TARGET_TANK_TEMPERATURE_LOW		TargetTankTemperature - TargetTankTemperatureHysteresis/2
+#define TARGET_TANK_TEMPERATURE_HIGH	TargetTankTemperature + TargetTankTemperatureHysteresis/2
+
 void Init_Temperature(void)
 {
 	uint8_t i;
@@ -86,4 +92,17 @@ uint16_t GetDeltaTemperature(uint8_t sensor_index)
 		return(0xFFFF);
 	}
 }
-
+	
+uint8_t GetTankTemperatureState(void)
+{
+	if(Tsensors[TANK_TOP].temperature<TARGET_TANK_TEMPERATURE_LOW)
+	{
+		return(TEMPERATURE_BELOW_THRESHOLD);
+	}else if(Tsensors[TANK_TOP].temperature>TARGET_TANK_TEMPERATURE_HIGH)
+	{
+		return(TEMPERATURE_ABOVE_THRESHOLD);
+	}else
+	{
+		return(TEMPERATURE_IN_RANGE);
+	}	
+}
