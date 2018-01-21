@@ -85,28 +85,40 @@ ProcessStateMachine_s(void)
 
 void Thermostat(void)
 {
-	static uint8_t ThermostatState = OFF_;
+	static uint8_t ThermostatState = OFF_LOCKED;
+	uint16_t EventTimer_s;
 
+	EventTimer_s = GetEventTimer_s();
 	switch(ThermostatState)
 	{
-		//case OFF_LOCKED:
-		//	break;
-		case OFF_:
-			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
-			{				
-				printf("Heatpump ON\n");
-				ThermostatState = ON_;
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
+		case OFF_LOCKED:	// No checking for temperature, needs to stay OFF for defined period of time
+			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_OFF)
+			{
+				ThermostatState = OFF_;
 			}
 			break;
-		//case ON_LOCKED:
-		//	break;
-		case ON_:
+		case OFF_:			// Check temperature and change state if needed
+			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
+			{				
+				printf("Heatpump ON, was on for $d seconds\n", EventTimer_s);
+				ThermostatState = ON_;
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
+				ClearEventTimer_s();
+			}
+			break;
+		case ON_LOCKED:		// No checking for temperature, needs to stay ON for defined period of time
+			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_ON)
+			{
+				ThermostatState = ON_;
+			}
+			break;
+		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
 			{
-				printf("Heatpump OFF\n");
+				printf("Heatpump OFF, was on for $d seconds\n", EventTimer_s);
 				ThermostatState = OFF_;
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);				
+				ClearEventTimer_s();
 			}
 			break;
 		default:
@@ -165,12 +177,3 @@ int main(void)
 	}	
 	return 0;
 }
-
-/*
-POST	-> BOOT			-> OFF	-> ON_LOCKED	-> ON		-> OFF_LOCKED -|
-							^----------------------------------------------|
-								-> ERROR
-		-> BOOT_ERROR
-
-
-*/

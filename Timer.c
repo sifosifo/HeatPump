@@ -40,6 +40,11 @@ uint16_t GetEventTimer_s(void)
 	return(EventTimer_s);
 }
 
+void ClearEventTimer_s(void)
+{
+	EventTimer_s = 0;
+}
+
 ISR(__vector_default)
 {
 	TCNT1 = 65535 - 62500;	
