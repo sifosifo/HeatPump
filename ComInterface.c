@@ -30,6 +30,8 @@ typedef struct
 
 } can_custom_t;
 
+uin8_t CANactive = 0;	// Indicates if CAN was initialized correctly
+
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
  *
@@ -183,6 +185,23 @@ uint8_t Init_ComInterface(void)
 	PCMSK0 |= (1<<1);
 
 	return(result);
+}
+
+void CheckIfCANIsActive(void)
+{
+	uint8_t err;
+
+	if(CANactive==0)
+	{
+		err = uint8_t Init_ComInterface();
+		if(err==0)
+		{	
+			CANactive = 0;
+		}else
+		{
+			CANactive = 1;
+		}
+	}
 }
 
 ISR(PCINT0_vect)
