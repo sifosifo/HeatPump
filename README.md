@@ -16,5 +16,10 @@ Output:
 Issues:
 - temperature readings freeze from time to time
 - When serial port is not connected to PC, AVR restarts after pump check
-- Outputs are switched on in random times when CAN is connected
-- CAN is not initialized correctly every boot
+
+Missing features:
+- thermostat (activate heat pump at some temperature in tank and deactivate it once that reaches desired temperature)
+- Short cycling protection - avoid shorter on or off times than 10 minutes
+- check if temperature sensors are ok
+- check if flow meters/circulating pumps are ok
+
