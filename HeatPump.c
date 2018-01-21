@@ -22,6 +22,7 @@ uint8_t ActiveErrors = 0;
 
 void Halt(void)
 {	// Something must went wrong
+	printf("Going off\n");
 	while(1)
 	{
 		cli();
@@ -84,11 +85,8 @@ ProcessStateMachine_s(void)
 
 void Thermostat(void)
 {
-	int16_t TankTemperature;
-	static uint8_t ThermostatState = 0;
+	static uint8_t ThermostatState = OFF_;
 
-	TankTemperature = GetTemperature(TANK_TOP);
-	
 	switch(ThermostatState)
 	{
 		//case OFF_LOCKED:
@@ -98,6 +96,7 @@ void Thermostat(void)
 			{				
 				printf("Heatpump ON\n");
 				ThermostatState = ON_;
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
 			}
 			break;
 		//case ON_LOCKED:
@@ -107,6 +106,7 @@ void Thermostat(void)
 			{
 				printf("Heatpump OFF\n");
 				ThermostatState = OFF_;
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 			}
 			break;
 		default:
@@ -121,47 +121,38 @@ void Task_1000ms(void)
 	uint32_t timestamp;
 
 	ProcessFlow_s();
-	ProcessStateMachine_s();
-	timestamp = GetTimestamp();	
-	if(timestamp/10==0)
-	{
-		SendDebugMessage(0x10, (uint8_t*)timestamp);
-	}
+	printf("Timer");
+//	ProcessStateMachine_s();
+//	timestamp = GetTimestamp();	
+//	if(timestamp/10==0)
+//	{
+//		SendDebugMessage(0x10, (uint8_t*)timestamp);
+//	}
 }
 
 int main(void)
 {
-	uint8_t err = 0;
-	uint8_t wow[8];
-
 	uart_init();	
-	
-	printf("B");
+	printf("--------------Booting----------------\n");
 	Init_Temperature();
-	printf("1");
+	printf("Init_Temperature\n");
 	Init_WaterFlow();
-	printf("2");
+	printf("Init_WaterFlow\n");
 	Init_Relays();
-	printf("3");
-	Init_Timer(&Task_1000ms);
-	printf("4");
-	err = Init_ComInterface();
-	wow[0] = 0;
-	wow[1] = 0;
-	if(err==0)SendDebugMessage(0xFF, wow);
-	printf("5\n");	
+	printf("Init_Relays\n");
+	Init_Timer(&Task_1000ms);	
+	printf("Init_Timer\n");
+	//err = Init_ComInterface();	
 	sei();
-	err = MeasureTemperature();
-	wow[0] = 1;
-	wow[1] = err;
-	if(err!=0)SendDebugMessage(0xFF, wow);
-	RunPOST();	
+	MeasureTemperature();	
+	printf("MeasureTemperature\n");
+	//RunPOST();	
 	while (1)	// Idle loop
 	{		
-		err = MeasureTemperature();
-		//UDR0='T';
-		
-		//SendBootupMessage(err);
+		printf("IDLE: temp\n");
+		//err = MeasureTemperature();
+		MeasureTemperature();
+		printf("IDLE: CAN\n");
 		CheckIfCANIsActive();	
 	/*
 		- Check if temperature sensors present -> TempSensPresent
@@ -169,7 +160,9 @@ int main(void)
 		- Check if flow > min in case pump is running -> FlowOK
 		- Want to start a pump? If FlowOK, store EventTimer_s -> PumpOk
 		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor			*/
+		printf("IDLE: state machine\n");
 		ProcessStateMachine_s();
+		printf("IDLE: Thermostat\n");
 		Thermostat();		
 	}	
 	return 0;

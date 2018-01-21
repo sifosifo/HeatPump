@@ -23,8 +23,8 @@ void Init_Timer(void *Task_1000ms)
 ISR(TIMER1_OVF_vect)
 {
 	Timestamp++;
-	//	TCNT1 = 65535 - 62500;	// 1s
-	TCNT1 = 65535 - 6250;	// 100ms
+	TCNT1 = 65535 - 62500;	// 1s
+	//TCNT1 = 65535 - 6250;	// 100ms
 //	SendBootupMessage(0xAA);
 	(*Task_1)();
 	EventTimer_s++;

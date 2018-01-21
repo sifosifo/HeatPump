@@ -9,8 +9,8 @@
 #include "HeatPump.h"
 #include "uart.h"
 
-typedef enum {RESERVED, GET_STATUS, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
-	READ_TANK, READ_ENERGY, READ_COP, 
+typedef enum {RESERVED, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
+	READ_TANK, READ_ENERGY, READ_COP, GET_STATUS, 
 	READ_ACTIVE_ERRORS, READ_ERROR_HISTORY} actions_index;
 
 typedef struct
@@ -29,8 +29,6 @@ typedef struct
 	} data;
 
 } can_custom_t;
-
-uin8_t CANactive = 0;	// Indicates if CAN was initialized correctly
 
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
@@ -189,11 +187,12 @@ uint8_t Init_ComInterface(void)
 
 void CheckIfCANIsActive(void)
 {
+	static uint8_t CANactive = 0;	// Indicates if CAN was initialized correctly
 	uint8_t err;
 
 	if(CANactive==0)
 	{
-		err = uint8_t Init_ComInterface();
+		err = Init_ComInterface();
 		if(err==0)
 		{	
 			CANactive = 0;
@@ -216,8 +215,7 @@ ISR(PCINT0_vect)
 	// Even ID is request, Odd ID is reply
 	// Request ID is BASE_CAN_ID + message_id * 2
 	// Response ID is simply incremented
-	msg.id++;
-	switch(msg.id)
+	switch(msg.id++)
 	{
 	case BASE_CAN_ID+GET_STATUS*2:		
 		msg.length = 3;
