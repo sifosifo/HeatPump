@@ -18,8 +18,6 @@ Issues:
 - When serial port is not connected to PC, AVR restarts after pump check
 
 Missing features:
-- thermostat (activate heat pump at some temperature in tank and deactivate it once that reaches desired temperature)
-- Short cycling protection - avoid shorter on or off times than 10 minutes
 - check if temperature sensors are ok
 - check if flow meters/circulating pumps are ok
 
