@@ -101,6 +101,7 @@ const uint8_t can_filter[] PROGMEM =
 
 void SendBootupMessage(uint8_t debug_value)
 {	
+	#ifndef DEBUG
 	can_t msg;
 	
 	msg.id = 0x123;
@@ -115,10 +116,12 @@ void SendBootupMessage(uint8_t debug_value)
 	msg.data[4] = debug_value;
 	
 	can_send_message(&msg);
+	#endif
 }
 
 void SendBootupMessage2(uint8_t debug_value)
 {	
+	#ifndef DEBUG
 	can_t msg;
 	
 	msg.id = 0x130;
@@ -133,10 +136,12 @@ void SendBootupMessage2(uint8_t debug_value)
 	msg.data[4] = debug_value;
 	
 	can_send_message(&msg);
+	#endif
 }
 
 void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
 {	
+	#ifndef DEBUG
 	can_t msg;
 	
 	msg.id = id;
@@ -154,6 +159,7 @@ void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
 	msg.data[7] = debug_value[7];
 	
 	can_send_message(&msg);
+	#endif
 }
 
 uint8_t Init_ComInterface(void)

@@ -149,20 +149,18 @@ int main(void)
 	//RunPOST();	
 	while (1)	// Idle loop
 	{		
-		printf("IDLE: temp\n");
 		//err = MeasureTemperature();
 		MeasureTemperature();
-		printf("IDLE: CAN\n");
+		#ifdef DEBUG
 		CheckIfCANIsActive();	
+		#endif
 	/*
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK
 		- Check if flow > min in case pump is running -> FlowOK
 		- Want to start a pump? If FlowOK, store EventTimer_s -> PumpOk
 		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor			*/
-		printf("IDLE: state machine\n");
 		ProcessStateMachine_s();
-		printf("IDLE: Thermostat\n");
 		Thermostat();		
 	}	
 	return 0;

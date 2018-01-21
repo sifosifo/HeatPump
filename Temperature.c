@@ -1,5 +1,6 @@
 #include "Temperature.h"
 #include <stdint.h>
+#include <stdio.h>	// For printf
 #include <avr/io.h>
 #include <stdlib.h>
 #include <util/delay.h>
@@ -46,18 +47,15 @@ uint8_t MeasureTemperature(void)
 	uint8_t i;
 	uint8_t err = 0;
 	uint8_t result = 0;	
-
 	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)	// Start conversions
-	{		
+	{	
 		err = ds18b20convert(Tsensors[i].PORT, Tsensors[i].DDR, Tsensors[i].PIN, ( 1 << Tsensors[i].pin ), NULL );				
 		result += err;
 		Tsensors[i].state = (err == DS18B20_OK) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;		
-	}
-	
+	}	
 	_delay_ms( 1000 );		//Delay (sensor needs time to perform conversion)
-	
 	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)	// Get measured temperatures
-	{
+	{		
 		if(Tsensors[i].state == TEMPERATURE_SENSOR_OK)
 		{	// No need to read value if sensor is not present
 			err = ds18b20read(Tsensors[i].PORT, Tsensors[i].DDR, Tsensors[i].PIN, ( 1 << Tsensors[i].pin ), NULL, &Tsensors[i].temperature);
@@ -65,12 +63,13 @@ uint8_t MeasureTemperature(void)
 			Tsensors[i].state = (err == DS18B20_OK) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;		
 		}else
 		{	// Sensor is not connected
+			printf("Sensor %d not connected...\n", i);	
 			if(Tsensors[i].error_counter < 255)
 			{
 				Tsensors[i].error_counter++;
 			}
 		}		
-	}
+	}	
 	return(result);	// number of errors detected / more or less number of sensors not connected
 }
 
