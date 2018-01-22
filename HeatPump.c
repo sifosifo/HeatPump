@@ -19,6 +19,8 @@
 uint8_t POST_status = 0;
 uint8_t ActiveErrors = 0;
 
+void Thermostat(void);
+
 void Halt(void)
 {	// Something must went wrong
 	printf("Going off\n");
@@ -78,7 +80,7 @@ void Thermostat(void)
 		case OFF_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
-				printf("Heatpump ON, was on for %d seconds\n", EventTimer_s);
+				printf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
 				ThermostatState = ON_FLOW_CHECKING;				
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
@@ -90,12 +92,13 @@ void Thermostat(void)
 			SecondaryFlow_dcl = GetFlow_dclmin(SECONDARY_SIDE);
 			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
 			{
+				printf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
 				if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
 				{
 					printf("************Flow checking OK:*************\n");
 					printf("Actual/Desired flow after %ds\n", EventTimer_s);
-					printf("Primary:\t%d/%dl/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
-					printf("Secondary:\t%d/%dl/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+					printf("Primary:\t%d/%d l/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+					printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 					SetRelayState(COMPRESSOR, 0);
 					ThermostatState = ON_LOCKED;
 				}
@@ -103,8 +106,8 @@ void Thermostat(void)
 			{
 				printf("************Flow checking error:*************\n");
 				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
-				printf("Primary:\t%d/%dl/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
-				printf("Secondary:\t%d/%dl/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 				Halt();
 			}
 			break;

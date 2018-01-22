@@ -11,10 +11,10 @@
 #endif
 #include <util/setbaud.h>
 
-/* http://www.cs.mun.ca/~rod/Winter2007/4723/notes/serial/serial.html */
+int uart_putchar(char c, FILE *stream);
+int uart_getchar(FILE *stream);
 
-FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
-FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
+FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
 void uart_init(void) {
     UBRR0H = UBRRH_VALUE;
@@ -29,10 +29,10 @@ void uart_init(void) {
     UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */ 
     UCSR0B = _BV(RXEN0) | _BV(TXEN0);   /* Enable RX and TX */    
 
-	stdout = &uart_output;
+	stdout = stdin = &uart_str;
 }
 
-void uart_putchar(char c, FILE *stream) {
+int uart_putchar(char c, FILE *stream) {
     if (c == '\n') {
         uart_putchar('\r', stream);
     }
@@ -40,7 +40,7 @@ void uart_putchar(char c, FILE *stream) {
     UDR0 = c;
 }
 
-char uart_getchar(FILE *stream) {
+int uart_getchar(FILE *stream) {
     loop_until_bit_is_set(UCSR0A, RXC0); /* Wait until data exists. */
     return UDR0;
 }

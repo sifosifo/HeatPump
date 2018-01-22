@@ -69,7 +69,7 @@ void ProcessFlow_s(void)
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)50) / (uint16_t)33);
-		Flows_dclmin[i] *= 10;	//TODO 100ms
+		//Flows_dclmin[i] *= 10;SecondaryFlow_dcl
 		//tmp = (uint32_t)Pulses * (uint32_t)[kg/m3] * (uint32_t)WaterSpecHeatCap[temperature] / (uint32_t)110;
 
 		deltaT = GetDeltaTemperature(i);
