@@ -78,7 +78,7 @@ void Thermostat(void)
 		case OFF_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
-				printf("Heatpump ON, was on for $d seconds\n", EventTimer_s);
+				printf("Heatpump ON, was on for %d seconds\n", EventTimer_s);
 				ThermostatState = ON_FLOW_CHECKING;				
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
@@ -93,7 +93,7 @@ void Thermostat(void)
 				if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
 				{
 					printf("************Flow checking OK:*************\n");
-					printf("Actual/Desired flow after %ds\n", FLOW_CHECKING_TIMEOUT_PERIOD);
+					printf("Actual/Desired flow after %ds\n", EventTimer_s);
 					printf("Primary:\t%d/%dl/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 					printf("Secondary:\t%d/%dl/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 					SetRelayState(COMPRESSOR, 0);
@@ -117,7 +117,7 @@ void Thermostat(void)
 		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
 			{
-				printf("Heatpump OFF, was on for $d seconds\n", EventTimer_s);
+				printf("Heatpump OFF, was on for %d seconds\n", EventTimer_s);
 				ThermostatState = OFF_COOLDOWN;
 				printf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
 				SetRelayState(COMPRESSOR, 1);				
@@ -173,8 +173,7 @@ int main(void)
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK
 		- Check if flow > min in case pump is running -> FlowOK
-		- Want to start a pump? If FlowOK, store EventTimer_s -> PumpOk
-		- Want to start compressor? If PumpOk and TempOk and ShortCycleOK -> Start Compressor			*/
+		*/
 		ProcessStateMachine_s();				
 	}	
 	return 0;
