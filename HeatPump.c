@@ -159,19 +159,17 @@ int main(void)
 	Init_Relays();
 	printf("Init_Relays\n");
 	Init_Timer(&Task_1000ms);	
-	printf("Init_Timer\n");
-	//err = Init_ComInterface();	
-	sei();
-	MeasureTemperature();	
-	printf("MeasureTemperature\n");
+	printf("Init_Timer\n");		
+	sei();	
 	//RunPOST();	
 	while (1)	// Idle loop
 	{		
-		//err = MeasureTemperature();
-		MeasureTemperature();
-		#ifdef DEBUG
+		
+		#ifndef DEBUG
 		CheckIfCANIsActive();	
 		#endif
+		//err = MeasureTemperature();
+		MeasureTemperature();
 	/*
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK

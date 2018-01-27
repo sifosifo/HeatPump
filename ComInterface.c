@@ -165,16 +165,16 @@ void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
 uint8_t Init_ComInterface(void)
 {
 	uint8_t result = 0;
-	printf("CAN\n");
+//	printf("CAN\n");
 	// Initialize MCP2515
 	result = can_init(BITRATE_250_KBPS);
 	
 	if(result == 0)
 	{	// Error - not possible to initialise		
-		printf("FAIL\n");
+//		printf("FAIL\n");
 	}else
 	{
-		printf("OK\n");
+//		printf("OK\n");
 	}
 	// Baudrate constants are in library in file mcp2515.c
 	
@@ -195,10 +195,12 @@ void CheckIfCANIsActive(void)
 {
 	static uint8_t CANactive = 0;	// Indicates if CAN was initialized correctly
 	uint8_t err;
-
+		
 	if(CANactive==0)
 	{
+		printf("Init CAN\n");
 		err = Init_ComInterface();
+		printf("Init status: %d\n", err);
 		if(err==0)
 		{	
 			CANactive = 0;
