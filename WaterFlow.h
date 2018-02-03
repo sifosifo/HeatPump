@@ -12,3 +12,6 @@ uint16_t GetPower_W(uint8_t SensorIndex);
 
 // Calculate flow every second
 void ProcessFlow_s(void);
+
+// Is flow on both sides nominal (above minimal)
+uint8_t WaterFlowNominal(void);

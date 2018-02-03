@@ -86,6 +86,15 @@ void Thermostat(void)
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
 				ClearEventTimer_s();
 			}
+			if(WaterFlowNominal())	// Block heatpump in case of nominal flow detected
+			{	// Circulating pump relay is stuck or error while reading flow sensor
+				// Might cause reading nominal flow when no flow is present - critical error
+				printf("************Flow checking error:*************\n");
+				printf("Actual/Desired flow \n");
+				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
+				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
+				Halt();
+			} 	
 			break;
 		case ON_FLOW_CHECKING:			
 			PrimaryFlow_dcl = GetFlow_dclmin(PRIMARY_SIDE);
@@ -93,7 +102,7 @@ void Thermostat(void)
 			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
 			{
 				printf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
-				if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
+				if(WaterFlowNominal())
 				{
 					printf("************Flow checking OK:*************\n");
 					printf("Actual/Desired flow after %ds\n", EventTimer_s);
@@ -116,6 +125,7 @@ void Thermostat(void)
 			{
 				ThermostatState = ON_;
 			}
+			if(WaterFlowNominal()==0) ThermostatState = OFF_LOCKED;	// Stop heatpump in case of insufficient flow
 			break;
 		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
@@ -126,6 +136,7 @@ void Thermostat(void)
 				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
 			}
+			if(WaterFlowNominal()==0) ThermostatState = OFF_LOCKED;	// Stop heatpump in case of insufficient flow
 			break;
 		default:
 			printf("Error Thermostat.\n");

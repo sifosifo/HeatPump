@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -49,6 +50,7 @@ ISR(__vector_default)
 {
 	TCNT1 = 65535 - 62500;	
 	SendBootupMessage(0xBB);
+	printf("vector_default");
 //	(*Task_1)();
 /*
 	can_t msg;

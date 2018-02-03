@@ -85,6 +85,22 @@ void ProcessFlow_s(void)
 	}
 }
 
+uint8_t WaterFlowNominal(void)
+{
+	uint8_t nominal = 0;
+	uint8_t PrimaryFlow_dcl;
+	uint8_t SecondaryFlow_dcl;
+
+	PrimaryFlow_dcl = GetFlow_dclmin(PRIMARY_SIDE);
+	SecondaryFlow_dcl = GetFlow_dclmin(SECONDARY_SIDE);
+	if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
+	{
+		nominal = 1;
+	}
+
+	return(nominal);
+}
+
 ISR(INT0_vect)
 {
 	//UDR0='W';
