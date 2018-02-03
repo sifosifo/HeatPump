@@ -105,14 +105,18 @@ int16_t GetTemperature(uint8_t index)
 	return(Tsensors[index].temperature);
 }
 
-uint16_t GetDeltaTemperature(uint8_t sensor_index)
+int16_t GetDeltaTemperature(uint8_t sensor_index)
 {
+	int16_t result = 0;
+
 	if(sensor_index==PRIMARY_SIDE)
 	{
-		return(Tsensors[PRIMARY_SIDE_INLET].temperature-Tsensors[PRIMARY_SIDE_OUTLET].temperature);
+		result = Tsensors[PRIMARY_SIDE_INLET].temperature-Tsensors[PRIMARY_SIDE_OUTLET].temperature;		
+		return(result);
 	}else if(sensor_index==SECONDARY_SIDE)
 	{
-		return(Tsensors[Tsensors[SECONDARY_SIDE_OUTLET].temperature-SECONDARY_SIDE_INLET].temperature);
+		result = Tsensors[SECONDARY_SIDE_OUTLET].temperature-Tsensors[SECONDARY_SIDE_INLET].temperature;		
+		return(result);
 	}else
 	{
 		return(0xFFFF);

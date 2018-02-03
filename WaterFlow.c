@@ -1,4 +1,5 @@
 #include <avr/interrupt.h>
+#include <stdio.h>
 #include "WaterFlow.h"
 #include "Constants.h"
 #include "HeatPump.h"
@@ -78,7 +79,7 @@ void ProcessFlow_s(void)
 		tmp = (uint32_t)Pulses[i] * (uint32_t)980;
 		tmp *= (uint32_t)4200;
 		tmp /= (uint32_t)110;	
-		Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)3600)/(uint16_t)(16);
+		Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)3600)/(uint16_t)(16);		
 		//Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)360)/(uint16_t)(16);
 		Pulses[i] = 0;	// reset counter
 	}

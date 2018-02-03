@@ -149,8 +149,7 @@ void Task_1000ms(void)
 {
 	uint32_t timestamp;
 
-	ProcessFlow_s();
-	printf("Timer");
+	ProcessFlow_s();	
 //	ProcessStateMachine_s();
 //	timestamp = GetTimestamp();	
 //	if(timestamp/10==0)

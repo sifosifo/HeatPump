@@ -16,6 +16,6 @@ void Init_Temperature(void);
 uint8_t MeasureTemperature(void);
 void CheckTemperatureRanges(void);
 int16_t GetTemperature(uint8_t index);
-uint16_t GetDeltaTemperature(uint8_t sensor_index);
+int16_t GetDeltaTemperature(uint8_t sensor_index);
 uint8_t GetTankTemperatureState(void);
 
