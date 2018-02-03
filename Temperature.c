@@ -26,8 +26,17 @@ struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 4, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 5, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0};
 
-uint16_t TargetTankTemperature = 25*16;
+uint16_t TargetTankTemperature = 25*16;				// TODO: Needs to be a parameter in future
 uint16_t TargetTankTemperatureHysteresis = 5*16;
+
+#define MIN 0
+#define MAX 1
+
+static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {	// min, max in degrees of celzius
+	{ -5,	20}, { -5,	20},	// primary	
+	{ 5,	60}, { 5,	60},	// secondary	 
+	{ 5,	60}, { 5,	60}};	// tank
+	
 
 #define TARGET_TANK_TEMPERATURE_LOW		TargetTankTemperature - TargetTankTemperatureHysteresis/2
 #define TARGET_TANK_TEMPERATURE_HIGH	TargetTankTemperature + TargetTankTemperatureHysteresis/2
@@ -69,8 +78,26 @@ uint8_t MeasureTemperature(void)
 				Tsensors[i].error_counter++;
 			}
 		}		
-	}	
+	}
 	return(result);	// number of errors detected / more or less number of sensors not connected
+}
+
+void CheckTemperatureRanges(void)
+{
+	uint8_t i;
+
+	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)
+	{
+		if((Tsensors[i].temperature/16)<TemperatureRanges[i][MIN])
+		{	// Temperature too low
+			printf("Temperature sensor %d value %d is lower than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MIN]);
+			Halt();
+		}else if((Tsensors[i].temperature/16)>TemperatureRanges[i][MAX])
+		{	// Temperature too high
+			printf("Temperature sensor %d value %d is higher than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MAX]);
+			Halt();
+		}
+	}
 }
 
 int16_t GetTemperature(uint8_t index)

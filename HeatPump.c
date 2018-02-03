@@ -181,10 +181,10 @@ int main(void)
 		#endif
 		//err = MeasureTemperature();
 		MeasureTemperature();
+		CheckTemperatureRanges();
 	/*
 		- Check if temperature sensors present -> TempSensPresent
-		- If TempSensPresent, check if temperature in range -> TempOK
-		- Check if flow > min in case pump is running -> FlowOK
+		- If TempSensPresent, check if temperature in range -> TempOK		
 		*/
 		ProcessStateMachine_s();				
 	}	
