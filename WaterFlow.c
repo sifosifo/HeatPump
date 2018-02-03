@@ -64,8 +64,7 @@ void ProcessFlow_s(void)
 	int16_t deltaT;
 	
 	SendBootupMessage2(Pulses[0]);
-	//UDR0 = 'F';
-
+	
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)50) / (uint16_t)33);
@@ -103,12 +102,10 @@ uint8_t WaterFlowNominal(void)
 
 ISR(INT0_vect)
 {
-	//UDR0='W';
-    Pulses[PRIMARY_SIDE]++;
+	Pulses[PRIMARY_SIDE]++;
 }
 
 ISR(INT1_vect)
 {
-	//UDR0='V';
-    Pulses[SECONDARY_SIDE]++;
+	Pulses[SECONDARY_SIDE]++;
 }

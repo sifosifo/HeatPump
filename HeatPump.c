@@ -160,9 +160,7 @@ void Task_1000ms(void)
 }
 
 int main(void)
-{
-	uart_init();	
-	printf("--------------Booting----------------\n");
+{	
 	Init_Temperature();
 	printf("Init_Temperature\n");
 	Init_WaterFlow();
@@ -171,7 +169,10 @@ int main(void)
 	printf("Init_Relays\n");
 	Init_Timer(&Task_1000ms);	
 	printf("Init_Timer\n");		
-	sei();	
+	sei();
+	uart_init();	
+//	UDR0 = 'V';
+	printf("--------------Booting----------------\n");	
 	//RunPOST();	
 	while (1)	// Idle loop
 	{		
@@ -185,8 +186,14 @@ int main(void)
 	/*
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK		
+		- CAN initialization is not correct, after power reset (also CAN board has power reset), all ok
+		After button/SW reset, CAN initialization fails
+		- reset is caused by connecting? dissconecting? absent? serial connection
+		- secondary power value is not correct - too high
+		- values at web page are not updated all the time
 		*/
 		ProcessStateMachine_s();				
 	}	
 	return 0;
 }
+ 

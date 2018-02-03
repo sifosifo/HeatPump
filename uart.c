@@ -12,9 +12,14 @@
 #include <util/setbaud.h>
 
 int uart_putchar(char c, FILE *stream);
-int uart_getchar(FILE *stream);
+//int uart_getchar(FILE *stream);
 
-FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+//FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+FILE uart_str = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+
+char UARTbuffer[1<<8];
+uint8_t UBWp = 0;	// UART Buffer Write Pointer
+uint8_t UBRp = 0;	// Read
 
 void uart_init(void) {
     UBRR0H = UBRRH_VALUE;
@@ -27,20 +32,38 @@ void uart_init(void) {
 #endif
 
     UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */ 
-    UCSR0B = _BV(RXEN0) | _BV(TXEN0);   /* Enable RX and TX */    
+    UCSR0B = _BV(RXEN0) | _BV(TXEN0) | (1<<UDRIE0);   /* Enable RX and TX */    
 
 	stdout = stdin = &uart_str;
 }
 
-int uart_putchar(char c, FILE *stream) {
-    if (c == '\n') {
-        uart_putchar('\r', stream);
-    }
-    loop_until_bit_is_set(UCSR0A, UDRE0);
-    UDR0 = c;
+void SendC(void)
+{
+	if(UBRp!=UBWp)
+	{
+		UDR0 = UARTbuffer[UBRp];
+		UBRp++;
+		UBRp |= 0xFF;	// increment write pointer in circular buffer
+	}
 }
 
-int uart_getchar(FILE *stream) {
-    loop_until_bit_is_set(UCSR0A, RXC0); /* Wait until data exists. */
-    return UDR0;
+int uart_putchar(char c, FILE *stream)
+{
+	UARTbuffer[UBWp] = c;
+	UBWp++;
+	UBWp |= 0xFF;	// increment write pointer in circular buffer
+	if(bit_is_set(UCSR0A, UDRE0))
+	{
+		SendC();
+	}
 }
+
+ISR(USART_UDRE_vect)
+{
+	SendC();
+}
+
+//int uart_getchar(FILE *stream) {
+//    loop_until_bit_is_set(UCSR0A, RXC0); /* Wait until data exists. */
+//    return UDR0;
+//}
