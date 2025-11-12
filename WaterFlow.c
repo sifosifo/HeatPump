@@ -4,6 +4,7 @@
 #include "Constants.h"
 #include "HeatPump.h"
 #include "ComInterface.h"
+#include "Temperature.h"
 
 uint8_t Pulses[FLOW_SENSOR_COUNT];
 uint8_t Flows_dclmin[FLOW_SENSOR_COUNT];

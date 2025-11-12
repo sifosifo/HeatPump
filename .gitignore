@@ -1,2 +1,13 @@
-default/
-*~
+# Build artifacts
+*.o
+*.elf
+*.hex
+*.eep
+*.map
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PlatformIO (if you switch later)
+.pio/

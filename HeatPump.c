@@ -1,6 +1,5 @@
 // coding: utf-8
 
-#include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
@@ -13,27 +12,14 @@
 #include "Timer.h"
 #include "uart.h"
 #include "HeatPump.h"
-
-#define BOOT_DELAY 100
+#include "errors.h"
 
 uint8_t POST_status = 0;
 uint8_t ActiveErrors = 0;
 
 void Thermostat(void);
 
-void Halt(void)
-{	// Something must went wrong
-	printf("Going off\n");
-	while(1)
-	{
-		cli();
-		DDRB = 0;
-		DDRC = 0;
-		DDRD = 0;
-	}
-}
-
-ProcessStateMachine_s(void)
+void ProcessStateMachine_s(void)
 {
 	static uint8_t CurrentState = MACHINE_OK;
 
@@ -93,7 +79,7 @@ void Thermostat(void)
 				printf("Actual/Desired flow \n");
 				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
 				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
-				Halt();
+				error_Halt();
 			} 	
 			break;
 		case ON_FLOW_CHECKING:			
@@ -117,7 +103,7 @@ void Thermostat(void)
 				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
 				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
-				Halt();
+				error_Halt();
 			}
 			break;
 		case ON_LOCKED:		// No checking for temperature, needs to stay ON for defined period of time
@@ -140,7 +126,7 @@ void Thermostat(void)
 			break;
 		default:
 			printf("Error Thermostat.\n");
-			Halt();
+			error_Halt();
 			break;
 	}
 }

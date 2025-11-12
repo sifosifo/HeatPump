@@ -6,6 +6,7 @@
 #include <util/delay.h>
 #include "ds1820/ds18b20.h"
 #include "HeatPump.h"
+#include "errors.h"
 
 struct Tsensor
 {
@@ -33,7 +34,7 @@ uint16_t TargetTankTemperatureHysteresis = 5*16;
 #define MAX 1
 
 static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {	// min, max in degrees of celzius
-	{ -5,	20}, { -5,	20},	// primary	
+	{ -10,	30}, { -10,	30},	// primary	
 	{ 5,	60}, { 5,	60},	// secondary	 
 	{ 5,	60}, { 5,	60}};	// tank
 	
@@ -91,11 +92,11 @@ void CheckTemperatureRanges(void)
 		if((Tsensors[i].temperature/16)<TemperatureRanges[i][MIN])
 		{	// Temperature too low
 			printf("Temperature sensor %d value %d is lower than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MIN]);
-			Halt();
+			error_Halt();
 		}else if((Tsensors[i].temperature/16)>TemperatureRanges[i][MAX])
 		{	// Temperature too high
 			printf("Temperature sensor %d value %d is higher than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MAX]);
-			Halt();
+			error_Halt();
 		}
 	}
 }
