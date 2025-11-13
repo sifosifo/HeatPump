@@ -2,42 +2,52 @@
 ifeq ($(V),1)
     Q =
 else
-    Q = @
-    $(info === Building in silent mode. Use `make V=1` for verbose ===)
+   Q = @
+   $(info === Building in silent mode. Use `make V=1` for verbose ===)
 endif
 
 # === CONFIGURATION ===
 MCU = atmega328p
 F_CPU = 16000000UL
 TARGET = firmware
-SRC = $(wildcard *.c ds1820/*.c)
-OBJ = $(SRC:.c=.o)
+BUILD_DIR = build
+
+# Source files
+SRC = $(wildcard src/*.c)
+OBJ = $(SRC:src/%.c=$(BUILD_DIR)/%.o)
+DEP = $(OBJ:.o=.d)
 
 CC = avr-gcc
-CFLAGS = -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I./include -I.
+CFLAGS = -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) -Iinclude -MMD -MP
 LDFLAGS = -mmcu=$(MCU) -Wl,-u,vfprintf -lprintf_min
 
 AVRDUDE = avrdude
 
 # === RULES ===
-all: $(TARGET).hex
+all: $(BUILD_DIR)/$(TARGET).hex
 
-$(TARGET).hex: $(TARGET).elf
+$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
 	$(Q)avr-objcopy -O ihex -R .eeprom $< $@
 
-$(TARGET).elf: $(OBJ) libcan.a
-	$(Q)$(CC) $(LDFLAGS) -o $@ $(OBJ) libcan.a
+$(BUILD_DIR)/$(TARGET).elf: $(OBJ) lib/libcan.a | $(BUILD_DIR)
+	$(Q)$(CC) $(LDFLAGS) -o $@ $(OBJ) lib/libcan.a
 
-%.o: %.c
+$(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
-flash: $(TARGET).hex
-	$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyACM0 -b 115200 -U flash:w:$<
+$(BUILD_DIR):
+	$(Q)mkdir -p $@
+
+flash: $(BUILD_DIR)/$(TARGET).hex
+	$(Q)$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyACM0 -b 115200 -U flash:w:$<
 
 clean:
-	rm -f $(OBJ) $(TARGET).elf $(TARGET).hex
+	$(Q)rm -rf $(BUILD_DIR)
 
-size: $(TARGET).elf
-	avr-size --format=avr --mcu=$(MCU) $<
+size: $(BUILD_DIR)/$(TARGET).elf
+	$(Q)avr-size --format=avr --mcu=$(MCU) $<
+
+# Include dependency files
+-include $(DEP)
 
 .PHONY: all clean flash size

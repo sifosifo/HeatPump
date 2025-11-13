@@ -4,7 +4,7 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <util/delay.h>
-#include "ds1820/ds18b20.h"
+#include "ds18b20.h"
 #include "HeatPump.h"
 #include "errors.h"
 
