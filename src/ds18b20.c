@@ -3,6 +3,7 @@
 **
 ** This is a library to access the Dallas DS18B20 temperature sensor.
 ** The functions contained within this library implement the Dallas 1-Wire protocol.
+*/
 /*
 ** F_CPU should be defined by source code using this library
 ** If it is not defined, it will be defined with a default value of 1000000UL
@@ -80,6 +81,7 @@ uint8_t _reset(ds18b20_t *p)
             _delay_us(Trstl);
 
             DDRA = DDRA & plow;
+            PORTA = PORTA | phigh;  // Enable internal pull-up
             _delay_us(Trstwait);
             dq = (PINA & phigh) >> pin;
             break;
@@ -92,6 +94,7 @@ uint8_t _reset(ds18b20_t *p)
             _delay_us(Trstl);
 
             DDRB = DDRB & plow;
+            PORTB = PORTB | phigh;  // Enable internal pull-up
             _delay_us(Trstwait);
             dq = (PINB & phigh) >> pin;
             break;
@@ -104,6 +107,7 @@ uint8_t _reset(ds18b20_t *p)
             _delay_us(Trstl);
 
             DDRC = DDRC & plow;
+            PORTC = PORTC | phigh;  // Enable internal pull-up
             _delay_us(Trstwait);
             dq = (PINC & phigh) >> pin;
             break;
@@ -116,6 +120,7 @@ uint8_t _reset(ds18b20_t *p)
             _delay_us(Trstl);
 
             DDRD = DDRD & plow;
+            PORTD = PORTD | phigh;  // Enable internal pull-up
             _delay_us(Trstwait);
             dq = (PIND & phigh) >> pin;
             break;
@@ -154,6 +159,7 @@ uint8_t _read_dq(ds18b20_t *p)
 #ifdef PORTA
         case DS_PORT_A:
             DDRA = DDRA & plow;
+            PORTA = PORTA | phigh;  // Enable internal pull-up
             dq = (PINA & phigh) >> pin;
             break;
 #endif
@@ -161,6 +167,7 @@ uint8_t _read_dq(ds18b20_t *p)
 #ifdef PORTB
         case DS_PORT_B:
             DDRB = DDRB & plow;
+            PORTB = PORTB | phigh;  // Enable internal pull-up
             dq = (PINB & phigh) >> pin;
             break;
 #endif
@@ -168,6 +175,7 @@ uint8_t _read_dq(ds18b20_t *p)
 #ifdef PORTC
         case DS_PORT_C:
             DDRC = DDRC & plow;
+            PORTC = PORTC | phigh;  // Enable internal pull-up
             dq = (PINC & phigh) >> pin;
             break;
 #endif
@@ -175,6 +183,7 @@ uint8_t _read_dq(ds18b20_t *p)
 #ifdef PORTD
         case DS_PORT_D:
             DDRD = DDRD & plow;
+            PORTD = PORTD | phigh;  // Enable internal pull-up
             dq = (PIND & phigh) >> pin;
             break;
 #endif
@@ -221,6 +230,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTA = PORTA & plow;
                     _delay_us(Tlow0);
                     DDRA = DDRA & plow;
+                    PORTA = PORTA | phigh;  // Enable internal pull-up
                     break;
 #endif
 #ifdef PORTB
@@ -229,6 +239,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTB = PORTB & plow;
                     _delay_us(Tlow0);
                     DDRB = DDRB & plow;
+                    PORTB = PORTB | phigh;  // Enable internal pull-up
                     break;
 #endif
 #ifdef PORTC
@@ -237,6 +248,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTC = PORTC & plow;
                     _delay_us(Tlow0);
                     DDRC = DDRC & plow;
+                    PORTC = PORTC | phigh;  // Enable internal pull-up
                     break;
 #endif
 #ifdef PORTD
@@ -245,6 +257,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTD = PORTD & plow;
                     _delay_us(Tlow0);
                     DDRD = DDRD & plow;
+                    PORTD = PORTD | phigh;  // Enable internal pull-up
                     break;
 #endif
                 default:
@@ -263,6 +276,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTA = PORTA & plow;
                     _delay_us(Tlow1);
                     DDRA = DDRA & plow;
+                    PORTA = PORTA | phigh;  // Enable internal pull-up
                     _delay_us(Tslot - Tlow1);
                     break;
 #endif
@@ -272,6 +286,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTB = PORTB & plow;
                     _delay_us(Tlow1);
                     DDRB = DDRB & plow;
+                    PORTB = PORTB | phigh;  // Enable internal pull-up
                     _delay_us(Tslot - Tlow1);
                     break;
 #endif
@@ -281,6 +296,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTC = PORTC & plow;
                     _delay_us(Tlow1);
                     DDRC = DDRC & plow;
+                    PORTC = PORTC | phigh;  // Enable internal pull-up
                     _delay_us(Tslot - Tlow1);
                     break;
 #endif
@@ -290,6 +306,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
                     PORTD = PORTD & plow;
                     _delay_us(Tlow1);
                     DDRD = DDRD & plow;
+                    PORTD = PORTD | phigh;  // Enable internal pull-up
                     _delay_us(Tslot - Tlow1);
                     break;
 #endif
@@ -315,26 +332,78 @@ uint8_t _read_byte(ds18b20_t *p)
     uint8_t   plow;
     uint8_t   phigh;
 
-    int     n;
-    uint8_t ch;
+    uint8_t n;
     uint8_t data;
-    uint8_t dq;
+    uint8_t bit;
 
-    pin  = p->pin;
     port  = p->port;
+    pin   = p->pin;
     plow = p->plow;
     phigh = p->phigh;
 
-    dq = 0;
-    ch = 0;
     data = 0;
 
     for (n = 0; n < 8; n++)
     {
-        ch = _read_dq(p) << n;
-        data |= ch;
+        // Initiate read time slot: pull low briefly
+        switch(port)
+        {
+#ifdef PORTA
+            case DS_PORT_A:
+                DDRA = DDRA | phigh;
+                PORTA = PORTA & plow;
+                _delay_us(Tlow1);
+                DDRA = DDRA & plow;
+                PORTA = PORTA | phigh;  // Enable internal pull-up
+                _delay_us(Trdv - Tlow1);
+                bit = (PINA & phigh) >> pin;
+                break;
+#endif
 
-        /* then wait the rest of slot + recovery time */
+#ifdef PORTB
+            case DS_PORT_B:
+                DDRB = DDRB | phigh;
+                PORTB = PORTB & plow;
+                _delay_us(Tlow1);
+                DDRB = DDRB & plow;
+                PORTB = PORTB | phigh;  // Enable internal pull-up
+                _delay_us(Trdv - Tlow1);
+                bit = (PINB & phigh) >> pin;
+                break;
+#endif
+
+#ifdef PORTC
+            case DS_PORT_C:
+                DDRC = DDRC | phigh;
+                PORTC = PORTC & plow;
+                _delay_us(Tlow1);
+                DDRC = DDRC & plow;
+                PORTC = PORTC | phigh;  // Enable internal pull-up
+                _delay_us(Trdv - Tlow1);
+                bit = (PINC & phigh) >> pin;
+                break;
+#endif
+
+#ifdef PORTD
+            case DS_PORT_D:
+                DDRD = DDRD | phigh;
+                PORTD = PORTD & plow;
+                _delay_us(Tlow1);
+                DDRD = DDRD & plow;
+                PORTD = PORTD | phigh;  // Enable internal pull-up
+                _delay_us(Trdv - Tlow1);
+                bit = (PIND & phigh) >> pin;
+                break;
+#endif
+
+            default:
+                bit = 0;
+                break;
+        }
+
+        data |= (bit << n);
+
+        /* Wait the rest of the slot + recovery */
         _delay_us(Tslot - Trdv + 1 + Trec);
     }
 
@@ -504,4 +573,3 @@ int16_t ds18b20_read_temperature(ds18b20_t *p)
     temp16 = tempint * 16 + fraction;
     return temp16;
 }
-

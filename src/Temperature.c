@@ -51,8 +51,8 @@ void Init_Temperature(void)
         Tsensors[i].ds.pin  = Tsensors[i].pin;
 
         uint8_t rc = ds18b20_init(&Tsensors[i].ds);
-        Tsensors[i].state = (rc == 0) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
-        Tsensors[i].error_counter = (rc == 0) ? 0 : 1;
+        Tsensors[i].state = (rc == 1) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
+        Tsensors[i].error_counter = (rc == 1) ? 0 : 1;
         Tsensors[i].temperature = 0x8000;
     }
 }

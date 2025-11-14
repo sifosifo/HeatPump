@@ -52,6 +52,12 @@ uint16_t GetPower_W(uint8_t SensorIndex)
 	}
 }
 
+#define FLOW_NUMERATOR_USED 100	// Timis seems to be off, to compensate, added magix constant
+// --- WARNING CHECK ---
+#if (FLOW_NUMERATOR_USED != 50)
+#warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."
+#endif
+
 //	Sensor range:	0-25	l/min
 //					0-165	Hz
 //	F[Hz] = 6,6 * Q[l/min]
@@ -69,7 +75,7 @@ void ProcessFlow_s(void)
 	
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
-		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)50) / (uint16_t)33);
+		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
 		//Flows_dclmin[i] *= 10;SecondaryFlow_dcl
 		//tmp = (uint32_t)Pulses * (uint32_t)[kg/m3] * (uint32_t)WaterSpecHeatCap[temperature] / (uint32_t)110;
 
