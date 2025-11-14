@@ -4,7 +4,6 @@
 #include "Constants.h"
 #include "HeatPump.h"
 #include "ComInterface.h"
-#include "Temperature.h"
 
 uint8_t Pulses[FLOW_SENSOR_COUNT];
 uint8_t Flows_dclmin[FLOW_SENSOR_COUNT];
@@ -65,7 +64,7 @@ void ProcessFlow_s(void)
 	uint32_t tmp;
 	int16_t deltaT;
 	
-	//SendBootupMessage2(Pulses[0]);
+//	SendBootupMessage2(Pulses[0]);
 	
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
@@ -83,7 +82,7 @@ void ProcessFlow_s(void)
 			tmp *= (uint32_t)3605;	// 4200 water, 2500 ethanol
 		}else
 		{
-		tmp = (uint32_t)Pulses[i] * (uint32_t)980;
+			tmp = (uint32_t)Pulses[i] * (uint32_t)980;
 			tmp *= (uint32_t)4180;	// 4200 water
 		}
 		tmp /= (uint32_t)110;	

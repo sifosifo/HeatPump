@@ -1,8 +1,7 @@
-// coding: utf-8
-
-#include <avr/pgmspace.h>
+#include <avr/io.h>
+//#include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <util/delay.h>
 
 #include "Temperature.h"
@@ -12,37 +11,24 @@
 #include "Timer.h"
 #include "uart.h"
 #include "HeatPump.h"
-#include "errors.h"
 
-uint8_t POST_status = 0;
-uint8_t ActiveErrors = 0;
 static uint8_t ThermostatState = OFF_LOCKED;
 
-void Thermostat(void);
-
-void ProcessStateMachine_s(void)
-{
-	static uint8_t CurrentState = MACHINE_OK;
-
-	switch(CurrentState)
+void Halt(void)
+{	// Something must went wrong
+	printf("Going off\n");
+/*	while(1)
 	{
-		case MACHINE_OK:
-			Thermostat();
-			break;
-		case OFF_:
-			break;
-		case ON_LOCKED:
-			break;
-		case RECOVERABLE_ERROR:
-			break;
-		default:
-			break;
-	}
+		cli();
+		DDRB = 0;
+		DDRC = 0;
+		DDRD = 0;
+	}*/
+	ThermostatState = RECOVERABLE_ERROR;
 }
 
-void Thermostat(void)
-{
-	static uint8_t ThermostatState = OFF_LOCKED;
+ProcessStateMachine_s(void)
+{	
 	uint16_t EventTimer_s;
 	uint8_t PrimaryFlow_dcl;
 	uint8_t SecondaryFlow_dcl;
@@ -80,7 +66,6 @@ void Thermostat(void)
 				printf("Actual/Desired flow \n");
 				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
 				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
-				//error_Halt();
 				ThermostatState = RECOVERABLE_ERROR;
 				ClearEventTimer_s();
 			} 	
@@ -106,8 +91,7 @@ void Thermostat(void)
 				printf("************Flow checking error:*************\n");
 				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
 				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
-				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
-				//error_Halt();
+				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);				
 				ThermostatState = RECOVERABLE_ERROR;
 				ClearEventTimer_s();
 			}
@@ -150,26 +134,18 @@ void Thermostat(void)
 			break;
 		case FATAL_ERROR:
 			printf("Fatal error Thermostat.\n");
-			error_Halt();
+			Halt();
 			break;
 		default:
 			printf("Error Thermostat.\n");
-			error_Halt();
+			Halt();
 			break;
 	}
 }
 
 void Task_1000ms(void)
 {
-	uint32_t timestamp;
-
-	ProcessFlow_s();	
-//	ProcessStateMachine_s();
-//	timestamp = GetTimestamp();	
-//	if(timestamp/10==0)
-//	{
-//		SendDebugMessage(0x10, (uint8_t*)timestamp);
-//	}
+	ProcessFlow_s();
 }
 
 int main(void)
@@ -189,11 +165,7 @@ int main(void)
 	//RunPOST();	
 	while (1)	// Idle loop
 	{		
-		
-		#ifndef DEBUG
-		CheckIfCANIsActive();	
-		#endif
-		//err = MeasureTemperature();
+		CheckIfCANIsActive();
 		MeasureTemperature();
 		CheckTemperatureRanges();
 	/*
@@ -202,8 +174,9 @@ int main(void)
 		- CAN initialization is not correct, after power reset (also CAN board has power reset), all ok
 		After button/SW reset, CAN initialization fails
 		- reset is caused by connecting? dissconecting? absent? serial connection
-		- secondary power value is not correct - too high
-		- values at web page are not updated all the time
+		- check from time to time if CAN is still ok
+		- clear timer when jumping steps
+		- check timer overflow
 		*/
 		ProcessStateMachine_s();				
 	}	

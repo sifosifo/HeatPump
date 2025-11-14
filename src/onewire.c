@@ -47,6 +47,29 @@ uint8_t onewireInit( volatile uint8_t *port, volatile uint8_t *direction, volati
 	return response != 0 ? ONEWIRE_ERROR_COMM : ONEWIRE_ERROR_OK;
 }
 
+inline uint8_t onewireWriteBit( volatile uint8_t *port, volatile uint8_t *direction, volatile uint8_t *portin, uint8_t mask, uint8_t bit )
+{
+	uint8_t sreg = SREG;
+
+	cli( );
+
+	*port |= mask; //Write 1 to output
+	*direction |= mask;
+	*port &= ~mask; //Write 0 to output
+
+	if ( bit != 0 ) _delay_us( 8 );
+	else _delay_us( 80 );
+
+	*port |= mask;
+
+	if ( bit != 0 ) _delay_us( 80 );
+	else _delay_us( 2 );
+
+	SREG = sreg;
+
+	return bit != 0;
+}
+
 void onewireWrite( volatile uint8_t *port, volatile uint8_t *direction, volatile uint8_t *portin, uint8_t mask, uint8_t data )
 {
 	//Write byte to one wire bus
@@ -60,6 +83,26 @@ void onewireWrite( volatile uint8_t *port, volatile uint8_t *direction, volatile
 		onewireWriteBit( port, direction, portin, mask, data & i );
 
 	SREG = sreg;
+}
+
+inline uint8_t onewireReadBit( volatile uint8_t *port, volatile uint8_t *direction, volatile uint8_t *portin, uint8_t mask )
+{
+	uint8_t bit = 0;
+	uint8_t sreg = SREG;
+
+	cli( );
+	*port |= mask; //Write 1 to output
+	*direction |= mask;
+	*port &= ~mask; //Write 0 to output
+	_delay_us( 2 );
+	*direction &= ~mask; //Set port to input
+	*port |= mask;		// Set pull-up
+	_delay_us( 15 );
+	bit = ( ( *portin & mask ) != 0 ); //Read input
+	_delay_us( 65 );
+	SREG = sreg;
+
+	return bit;
 }
 
 uint8_t onewireRead( volatile uint8_t *port, volatile uint8_t *direction, volatile uint8_t *portin, uint8_t mask )

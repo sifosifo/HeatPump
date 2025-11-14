@@ -14,12 +14,10 @@ Output:
   Heat pump compressor
 
 Issues:
+- temperature readings freeze from time to time
 - When serial port is not connected to PC, AVR restarts after pump check
 
 Missing features:
 - check if temperature sensors are ok
+- check if flow meters/circulating pumps are ok
 
-
-
-CAN library (MCP2515):
-https://github.com/dergraaf/avr-can-lib

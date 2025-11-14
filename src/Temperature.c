@@ -6,7 +6,6 @@
 #include <util/delay.h>
 #include "ds18b20.h"
 #include "HeatPump.h"
-#include "errors.h"
 
 struct Tsensor
 {
@@ -27,14 +26,14 @@ struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 4, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 5, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0};
 
-uint16_t TargetTankTemperature = 50*16;				// TODO: Needs to be a parameter in future
+uint16_t TargetTankTemperature = 40*16;				// TODO: Needs to be a parameter in future
 uint16_t TargetTankTemperatureHysteresis = 2*16;
 
 #define MIN 0
 #define MAX 1
 
 static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {	// min, max in degrees of celzius
-	{ -10,	30}, { -10,	30},	// primary	
+	{ -8,	20}, { -8,	20},	// primary	
 	{ 5,	60}, { 5,	60},	// secondary	 
 	{ 5,	60}, { 5,	60}};	// tank
 	
@@ -89,14 +88,14 @@ void CheckTemperatureRanges(void)
 
 	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)
 	{
-		if((Tsensors[i].temperature/16)<TemperatureRanges[i][MIN])
+		if((Tsensors[i].temperature/16)<=TemperatureRanges[i][MIN])
 		{	// Temperature too low
 			printf("Temperature sensor %d value %d is lower than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MIN]);
-			//error_Halt();
-		}else if((Tsensors[i].temperature/16)>TemperatureRanges[i][MAX])
+			Halt();
+		}else if((Tsensors[i].temperature/16)>=TemperatureRanges[i][MAX])
 		{	// Temperature too high
 			printf("Temperature sensor %d value %d is higher than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MAX]);
-			//error_Halt();
+			Halt();
 		}
 	}
 }
@@ -126,18 +125,18 @@ int16_t GetDeltaTemperature(uint8_t sensor_index)
 	
 uint8_t GetTankTemperatureState(void)
 {
-	printf("Temperature %d \n", Tsensors[TANK_TOP].temperature/16);
-	if(Tsensors[TANK_TOP].temperature<TARGET_TANK_TEMPERATURE_LOW)
+	//printf("Temperature %d \n", Tsensors[TANK_TOP].temperature/16);
+	if(Tsensors[TANK_TOP].temperature<=TARGET_TANK_TEMPERATURE_LOW)
 	{
-		printf("Temperature below range\n");
+		//printf("Temperature below range\n");
 		return(TEMPERATURE_BELOW_THRESHOLD);
-	}else if(Tsensors[TANK_TOP].temperature>TARGET_TANK_TEMPERATURE_HIGH)
+	}else if(Tsensors[TANK_TOP].temperature>=TARGET_TANK_TEMPERATURE_HIGH)
 	{
-		printf("Temperature above range\n");
+		//printf("Temperature above range\n");
 		return(TEMPERATURE_ABOVE_THRESHOLD);
 	}else
 	{
-		printf("Temperature in range\n");
+		//printf("Temperature in range\n");
 		return(TEMPERATURE_IN_RANGE);
 	}	
 }
