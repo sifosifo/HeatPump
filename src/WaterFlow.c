@@ -65,7 +65,7 @@ void ProcessFlow_s(void)
 	uint32_t tmp;
 	int16_t deltaT;
 	
-	SendBootupMessage2(Pulses[0]);
+	//SendBootupMessage2(Pulses[0]);
 	
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
@@ -76,11 +76,22 @@ void ProcessFlow_s(void)
 		deltaT = GetDeltaTemperature(i);
 		if(deltaT<0)deltaT=0;
 		//deltaT = 4*16;
-		
+		if(i==0)
+		{
+			tmp = (uint32_t)Pulses[i] * (uint32_t)920;	//
+			//tmp *= (uint32_t)(((4200*65)+(2500*35))/100);	// 4200 water, 2500 ethanol
+			tmp *= (uint32_t)3605;	// 4200 water, 2500 ethanol
+		}else
+		{
 		tmp = (uint32_t)Pulses[i] * (uint32_t)980;
-		tmp *= (uint32_t)4200;
+			tmp *= (uint32_t)4180;	// 4200 water
+		}
 		tmp /= (uint32_t)110;	
-		Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)3600)/(uint16_t)(16);		
+		tmp *= (uint32_t)deltaT;
+		tmp /= (uint32_t)3600;
+		tmp /= (uint16_t)16;
+		Power_W[i] = (uint16_t)tmp;		
+		//Power_W[i]	=  (uint16_t)(tmp *  / (uint32_t)3600)/(uint16_t)(16);		
 		//Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)360)/(uint16_t)(16);
 		Pulses[i] = 0;	// reset counter
 	}

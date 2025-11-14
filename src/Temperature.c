@@ -27,8 +27,8 @@ struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 4, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
 	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 5, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0};
 
-uint16_t TargetTankTemperature = 25*16;				// TODO: Needs to be a parameter in future
-uint16_t TargetTankTemperatureHysteresis = 5*16;
+uint16_t TargetTankTemperature = 50*16;				// TODO: Needs to be a parameter in future
+uint16_t TargetTankTemperatureHysteresis = 2*16;
 
 #define MIN 0
 #define MAX 1
@@ -92,11 +92,11 @@ void CheckTemperatureRanges(void)
 		if((Tsensors[i].temperature/16)<TemperatureRanges[i][MIN])
 		{	// Temperature too low
 			printf("Temperature sensor %d value %d is lower than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MIN]);
-			error_Halt();
+			//error_Halt();
 		}else if((Tsensors[i].temperature/16)>TemperatureRanges[i][MAX])
 		{	// Temperature too high
 			printf("Temperature sensor %d value %d is higher than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MAX]);
-			error_Halt();
+			//error_Halt();
 		}
 	}
 }

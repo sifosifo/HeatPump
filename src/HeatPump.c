@@ -16,6 +16,7 @@
 
 uint8_t POST_status = 0;
 uint8_t ActiveErrors = 0;
+static uint8_t ThermostatState = OFF_LOCKED;
 
 void Thermostat(void);
 
@@ -32,7 +33,7 @@ void ProcessStateMachine_s(void)
 			break;
 		case ON_LOCKED:
 			break;
-		case ERROR:
+		case RECOVERABLE_ERROR:
 			break;
 		default:
 			break;
@@ -79,7 +80,9 @@ void Thermostat(void)
 				printf("Actual/Desired flow \n");
 				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
 				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
-				error_Halt();
+				//error_Halt();
+				ThermostatState = RECOVERABLE_ERROR;
+				ClearEventTimer_s();
 			} 	
 			break;
 		case ON_FLOW_CHECKING:			
@@ -96,6 +99,7 @@ void Thermostat(void)
 					printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 					SetRelayState(COMPRESSOR, 0);
 					ThermostatState = ON_LOCKED;
+					ClearEventTimer_s();
 				}
 			}else
 			{
@@ -103,7 +107,9 @@ void Thermostat(void)
 				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
 				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
-				error_Halt();
+				//error_Halt();
+				ThermostatState = RECOVERABLE_ERROR;
+				ClearEventTimer_s();
 			}
 			break;
 		case ON_LOCKED:		// No checking for temperature, needs to stay ON for defined period of time
@@ -111,7 +117,13 @@ void Thermostat(void)
 			{
 				ThermostatState = ON_;
 			}
-			if(WaterFlowNominal()==0) ThermostatState = OFF_LOCKED;	// Stop heatpump in case of insufficient flow
+			if(WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
+			{
+				SetRelayState(COMPRESSOR, 1);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				ThermostatState = OFF_LOCKED;
+			}
 			break;
 		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
@@ -122,7 +134,23 @@ void Thermostat(void)
 				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
 			}
-			if(WaterFlowNominal()==0) ThermostatState = OFF_LOCKED;	// Stop heatpump in case of insufficient flow
+			if(WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
+			{
+				SetRelayState(COMPRESSOR, 1);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				ThermostatState = OFF_LOCKED;
+			}
+			break;
+		case RECOVERABLE_ERROR:			
+			if(EventTimer_s>RECOVERABLE_ERROR_PERIOD_ON) ThermostatState = OFF_LOCKED;
+			SetRelayState(COMPRESSOR, 1);
+			SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+			SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);			
+			break;
+		case FATAL_ERROR:
+			printf("Fatal error Thermostat.\n");
+			error_Halt();
 			break;
 		default:
 			printf("Error Thermostat.\n");

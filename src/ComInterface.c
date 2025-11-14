@@ -174,19 +174,18 @@ uint8_t Init_ComInterface(void)
 //		printf("FAIL\n");
 	}else
 	{
-//		printf("OK\n");
+//		printf("OK\n");	
+		// Enable interrupt on pin change on PORTB
+		PCICR |= (1<<PCIE0);
+		//= PCIFR & (1<<PCIF1);	
+
+		//PCMSK1 |= (1<<PCINT8);
+		PCMSK0 |= (1<<1);
 	}
 	// Baudrate constants are in library in file mcp2515.c
 	
 	// Load filters and masks
 //	can_static_filter(can_filter);
-	
-	// Enable interrupt on pin change on PORTB
-	PCICR |= (1<<PCIE0);
-	//= PCIFR & (1<<PCIF1);	
-
-	//PCMSK1 |= (1<<PCINT8);
-	PCMSK0 |= (1<<1);
 
 	return(result);
 }

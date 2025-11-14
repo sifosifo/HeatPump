@@ -39,7 +39,7 @@ $(BUILD_DIR):
 	$(Q)mkdir -p $@
 
 flash: $(BUILD_DIR)/$(TARGET).hex
-	$(Q)$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyACM0 -b 115200 -U flash:w:$<
+	$(Q)$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyUSB0 -b 57600 -U flash:w:$<
 
 clean:
 	$(Q)rm -rf $(BUILD_DIR)

@@ -52,7 +52,7 @@ uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 	{
 		if(((mask>>i) & 0x01) == 1)	// Drive output
 		{
-			SetRelayState(i, (output>>i) & 0x01);
+			//SetRelayState(i, (output>>i) & 0x01);	// Used for switching outputs ON/OFF on request from CAN - manual operation
 		}
 		read_output += Relays[i].state<<i;
 	}
