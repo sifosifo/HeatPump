@@ -1,168 +1,150 @@
+/* --------------------------------------------------------------
+   Temperature.c – 1 Hz using public ds18b20_read_temperature()
+   -------------------------------------------------------------- */
 #include "Temperature.h"
-#include <stdint.h>
-#include <stdio.h>	// For printf
+#include <stdio.h>
 #include <avr/io.h>
-#include <stdlib.h>
 #include <util/delay.h>
-#include "ds18b20.h"
 #include "HeatPump.h"
 #include "errors.h"
 
-struct Tsensor
-{
-	uint8_t* PORT;
-	uint8_t* DDR;
-	uint8_t* PIN;
-	uint8_t pin;
-	uint8_t state;
-	uint8_t error_counter;
-	int16_t temperature;
+/* ------------------------------------------------------------------
+   Sensor table
+   ------------------------------------------------------------------ */
+struct Tsensor {
+    uint8_t   pin;
+    uint8_t   state;
+    uint8_t   error_counter;
+    int16_t   temperature;
+    ds18b20_t ds;
 };
 
-struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 0, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 1, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 2, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 3, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 4, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0,
-	(uint8_t*)&PORTC, (uint8_t*)&DDRC, (uint8_t*)&PINC, 5, TEMPERATURE_SENSOR_NOT_CONNECTED, 0, 0};
+static struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
+    {.pin = 0}, {.pin = 1}, {.pin = 2},
+    {.pin = 3}, {.pin = 4}, {.pin = 5}
+};
 
-uint16_t TargetTankTemperature = 50*16;				// TODO: Needs to be a parameter in future
-uint16_t TargetTankTemperatureHysteresis = 2*16;
+/* ------------------------------------------------------------------
+   Target & ranges
+   ------------------------------------------------------------------ */
+uint16_t TargetTankTemperature          = 50 * 16;
+uint16_t TargetTankTemperatureHysteresis = 2 * 16;
 
 #define MIN 0
 #define MAX 1
+static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {
+    {-10, 30}, {-10, 30},
+    {  5, 60}, {  5, 60},
+    {  5, 60}, {  5, 60}
+};
 
-static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {	// min, max in degrees of celzius
-	{ -10,	30}, { -10,	30},	// primary	
-	{ 5,	60}, { 5,	60},	// secondary	 
-	{ 5,	60}, { 5,	60}};	// tank
-	
+#define TARGET_TANK_TEMPERATURE_LOW  (TargetTankTemperature - TargetTankTemperatureHysteresis/2)
+#define TARGET_TANK_TEMPERATURE_HIGH (TargetTankTemperature + TargetTankTemperatureHysteresis/2)
 
-#define TARGET_TANK_TEMPERATURE_LOW		TargetTankTemperature - TargetTankTemperatureHysteresis/2
-#define TARGET_TANK_TEMPERATURE_HIGH	TargetTankTemperature + TargetTankTemperatureHysteresis/2
-
+/* ------------------------------------------------------------------
+   Init
+   ------------------------------------------------------------------ */
 void Init_Temperature(void)
 {
-	uint8_t i;
+    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
+        Tsensors[i].ds.port = DS_PORT_C;
+        Tsensors[i].ds.pin  = Tsensors[i].pin;
 
-	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)
-	{
-		//Temperatures[i] = 0;
-	}
+        uint8_t rc = ds18b20_init(&Tsensors[i].ds);
+        Tsensors[i].state = (rc == 0) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
+        Tsensors[i].error_counter = (rc == 0) ? 0 : 1;
+        Tsensors[i].temperature = 0x8000;
+    }
 }
 
-uint8_t EvaluateErrors(uint8_t result_in, uint8_t err)
-{
-	uint8_t result;
-
-	result = result_in + (err == DS18B20_OK) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;	
-
-	return(result);
-}
-
-void PrintErrors(void)
-{
-	printf("E:");
-	for(uint8_t i = 0; i<TEMPERATURE_SENSOR_COUNT; i++)
-	{
-		printf(" %d", Tsensors[i].state);
-	}
-	printf("\n");
-}
-
+/* ------------------------------------------------------------------
+   MeasureTemperature – called **once per second**
+   ------------------------------------------------------------------ */
 uint8_t MeasureTemperature(void)
 {
-	uint8_t i;
-	uint8_t err = 0;
-	uint8_t result = 0;	
-	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)	// Start conversions
-	{	
-		err = ds18b20convert(Tsensors[i].PORT, Tsensors[i].DDR, Tsensors[i].PIN, ( 1 << Tsensors[i].pin ), NULL );				
-		result = EvaluateErrors(result, err);
-		Tsensors[i].state = err;		
-	}
-	PrintErrors();
-	_delay_ms( 1000 );		//Delay (sensor needs time to perform conversion)
-	printf("T:");	
-	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)	// Get measured temperatures
-	{		
-		if(Tsensors[i].state == DS18B20_OK)
-		{	// No need to read value if sensor is not present
-			err = ds18b20read(Tsensors[i].PORT, Tsensors[i].DDR, Tsensors[i].PIN, ( 1 << Tsensors[i].pin ), NULL, &Tsensors[i].temperature);
-			result += err;
-			printf(" %dC", Tsensors[i].temperature);	
-			result = EvaluateErrors(result, err);
-			Tsensors[i].state = err;
-		}else
-		{	// Sensor is not connected
-			printf("Sensor %d error %d\n", i, Tsensors[i].state);	
-			if(Tsensors[i].error_counter < 255)
-			{
-				Tsensors[i].error_counter++;
-			}
-		}
-	}
-	printf("\n");
-	PrintErrors();
-	return(result);	// number of errors detected / more or less number of sensors not connected
+    uint8_t total_errors = 0;
+
+    printf("T:");
+
+    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
+        if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) {
+            printf(" NC");
+            ++total_errors;
+            continue;
+        }
+
+        int16_t temp = ds18b20_read_temperature(&Tsensors[i].ds);
+
+        if (temp == ENOTPRESENT) {
+            Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;
+            Tsensors[i].temperature = 0x8000;
+            printf(" ERR");
+            ++total_errors;
+            if (Tsensors[i].error_counter < 255) ++Tsensors[i].error_counter;
+        } else {
+            Tsensors[i].temperature = temp;
+            Tsensors[i].error_counter = 0;
+            printf(" %dC", temp / 16);
+        }
+    }
+    printf("\n");
+    return total_errors;
 }
 
+/* ------------------------------------------------------------------
+   Rest of your functions (copy from before)
+   ------------------------------------------------------------------ */
 void CheckTemperatureRanges(void)
 {
-	uint8_t i;
-
-	for(i=0; i<TEMPERATURE_SENSOR_COUNT; i++)
-	{
-		if((Tsensors[i].temperature/16)<TemperatureRanges[i][MIN])
-		{	// Temperature too low
-			printf("Temperature sensor %d value %d is lower than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MIN]);
-			//error_Halt();
-		}else if((Tsensors[i].temperature/16)>TemperatureRanges[i][MAX])
-		{	// Temperature too high
-			printf("Temperature sensor %d value %d is higher than %d\n", i, Tsensors[i].temperature/16, TemperatureRanges[i][MAX]);
-			//error_Halt();
-		}
-	}
+    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
+        if (Tsensors[i].state != TEMPERATURE_SENSOR_OK || Tsensors[i].temperature == 0x8000) continue;
+        int8_t t = Tsensors[i].temperature / 16;
+        if (t < TemperatureRanges[i][MIN])
+            printf("T%d LOW: %d < %d\n", i, t, TemperatureRanges[i][MIN]);
+        else if (t > TemperatureRanges[i][MAX])
+            printf("T%d HIGH: %d > %d\n", i, t, TemperatureRanges[i][MAX]);
+    }
 }
 
 int16_t GetTemperature(uint8_t index)
 {
-	return(Tsensors[index].temperature);
+    if (Tsensors[index].state != TEMPERATURE_SENSOR_OK) return 0x8000;
+    return Tsensors[index].temperature;
 }
 
 int16_t GetDeltaTemperature(uint8_t sensor_index)
 {
-	int16_t result = 0;
-
-	if(sensor_index==PRIMARY_SIDE)
-	{
-		result = Tsensors[PRIMARY_SIDE_INLET].temperature-Tsensors[PRIMARY_SIDE_OUTLET].temperature;		
-		return(result);
-	}else if(sensor_index==SECONDARY_SIDE)
-	{
-		result = Tsensors[SECONDARY_SIDE_OUTLET].temperature-Tsensors[SECONDARY_SIDE_INLET].temperature;		
-		return(result);
-	}else
-	{
-		return(0xFFFF);
-	}
+    if (sensor_index == PRIMARY_SIDE) {
+        int16_t in  = GetTemperature(PRIMARY_SIDE_INLET);
+        int16_t out = GetTemperature(PRIMARY_SIDE_OUTLET);
+        if (in == 0x8000 || out == 0x8000) return 0xFFFF;
+        return in - out;
+    }
+    if (sensor_index == SECONDARY_SIDE) {
+        int16_t out = GetTemperature(SECONDARY_SIDE_OUTLET);
+        int16_t in  = GetTemperature(SECONDARY_SIDE_INLET);
+        if (out == 0x8000 || in == 0x8000) return 0xFFFF;
+        return out - in;
+    }
+    return 0xFFFF;
 }
-	
+
 uint8_t GetTankTemperatureState(void)
 {
-	printf("Temperature %d \n", Tsensors[TANK_TOP].temperature/16);
-	if(Tsensors[TANK_TOP].temperature<TARGET_TANK_TEMPERATURE_LOW)
-	{
-		printf("Temperature below range\n");
-		return(TEMPERATURE_BELOW_THRESHOLD);
-	}else if(Tsensors[TANK_TOP].temperature>TARGET_TANK_TEMPERATURE_HIGH)
-	{
-		printf("Temperature above range\n");
-		return(TEMPERATURE_ABOVE_THRESHOLD);
-	}else
-	{
-		printf("Temperature in range\n");
-		return(TEMPERATURE_IN_RANGE);
-	}	
+    int16_t t = GetTemperature(TANK_TOP);
+    if (t == 0x8000) {
+        printf("Tank sensor error!\n");
+        return TEMPERATURE_IN_RANGE;
+    }
+    printf("Tank temperature %dC\n", t / 16);
+    if (t < TARGET_TANK_TEMPERATURE_LOW) {
+        printf("Temperature below range\n");
+        return TEMPERATURE_BELOW_THRESHOLD;
+    }
+    if (t > TARGET_TANK_TEMPERATURE_HIGH) {
+        printf("Temperature above range\n");
+        return TEMPERATURE_ABOVE_THRESHOLD;
+    }
+    printf("Temperature in range\n");
+    return TEMPERATURE_IN_RANGE;
 }

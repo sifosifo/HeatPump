@@ -163,7 +163,10 @@ void Task_1000ms(void)
 {
 	uint32_t timestamp;
 
-	ProcessFlow_s();	
+	ProcessFlow_s();
+	MeasureTemperature();
+	CheckTemperatureRanges();
+	ProcessStateMachine_s();	
 //	ProcessStateMachine_s();
 //	timestamp = GetTimestamp();	
 //	if(timestamp/10==0)
@@ -194,8 +197,7 @@ int main(void)
 		CheckIfCANIsActive();	
 		#endif
 		//err = MeasureTemperature();
-		MeasureTemperature();
-		CheckTemperatureRanges();
+
 	/*
 		- Check if temperature sensors present -> TempSensPresent
 		- If TempSensPresent, check if temperature in range -> TempOK		
@@ -205,7 +207,7 @@ int main(void)
 		- secondary power value is not correct - too high
 		- values at web page are not updated all the time
 		*/
-		ProcessStateMachine_s();				
+				
 	}	
 	return 0;
 }
