@@ -16,59 +16,59 @@
 
 uint8_t POST_status = 0;
 uint8_t ActiveErrors = 0;
-static uint8_t ThermostatState = OFF_LOCKED;
+uint8_t CurrentState = OFF_LOCKED;
+static uint32_t StateEntryTime = 0;
 
-void Thermostat(void);
+static inline const char *GetStateName(uint8_t s)
+{
+    if (s > FATAL_ERROR) return "UNKNOWN";
+    return (const char *)pgm_read_word(&state_names[s]);
+}
+
+// Dedicated function for state changes with debug printf
+void ChangeState(uint8_t newState)
+{
+	uint32_t now = timer_GetTimestamp_s();
+	uint32_t spent    = now - StateEntryTime;
+
+	printf("STATE CHANGE: %s -> %s | spent %lu s | uptime %lu s\n",
+		GetStateName(CurrentState),
+		GetStateName(newState),
+		(unsigned long)spent,
+		(unsigned long)now);
+
+    CurrentState = newState;
+	StateEntryTime = now;
+}
 
 void ProcessStateMachine_s(void)
 {
-	static uint8_t CurrentState = MACHINE_OK;
-
-	switch(CurrentState)
-	{
-		case MACHINE_OK:
-			Thermostat();
-			break;
-		case OFF_:
-			break;
-		case ON_LOCKED:
-			break;
-		case RECOVERABLE_ERROR:
-			break;
-		default:
-			break;
-	}
-}
-
-void Thermostat(void)
-{
-	static uint8_t ThermostatState = OFF_LOCKED;
 	uint16_t EventTimer_s;
 	uint8_t PrimaryFlow_dcl;
 	uint8_t SecondaryFlow_dcl;
 
 	EventTimer_s = GetEventTimer_s();
-	switch(ThermostatState)
+	switch(CurrentState)
 	{
 		case OFF_COOLDOWN:	// Let circulating pumps run for some time after compresor was turned off
 			if(EventTimer_s>COMPRESSOR_COOLDOWN_PERIOD)
 			{
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
-				ThermostatState = OFF_LOCKED;
+				ChangeState(OFF_LOCKED);
 			}
 			break;
 		case OFF_LOCKED:	// No checking for temperature, needs to stay OFF for defined period of time
 			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_OFF)
 			{
-				ThermostatState = OFF_;
+				ChangeState(OFF_);
 			}
 			break;
 		case OFF_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
 				printf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
-				ThermostatState = ON_FLOW_CHECKING;				
+				ChangeState(ON_FLOW_CHECKING);			
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
 				ClearEventTimer_s();
@@ -81,7 +81,7 @@ void Thermostat(void)
 				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
 				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
 				//error_Halt();
-				ThermostatState = RECOVERABLE_ERROR;
+				ChangeState(RECOVERABLE_ERROR);
 				ClearEventTimer_s();
 			} 	
 			break;
@@ -98,7 +98,7 @@ void Thermostat(void)
 					printf("Primary:\t%d/%d l/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 					printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 					SetRelayState(COMPRESSOR, 0);
-					ThermostatState = ON_LOCKED;
+					ChangeState(ON_LOCKED);
 					ClearEventTimer_s();
 				}
 			}else
@@ -108,28 +108,28 @@ void Thermostat(void)
 				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 				//error_Halt();
-				ThermostatState = RECOVERABLE_ERROR;
+				ChangeState(RECOVERABLE_ERROR);
 				ClearEventTimer_s();
 			}
 			break;
 		case ON_LOCKED:		// No checking for temperature, needs to stay ON for defined period of time
 			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_ON)
 			{
-				ThermostatState = ON_;
+				ChangeState(ON_);
 			}
 			if(WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
 				SetRelayState(COMPRESSOR, 1);
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
-				ThermostatState = OFF_LOCKED;
+				ChangeState(OFF_LOCKED);
 			}
 			break;
 		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
 			{
 				printf("Heatpump OFF, was on for %d seconds\n", EventTimer_s);
-				ThermostatState = OFF_COOLDOWN;
+				ChangeState(OFF_COOLDOWN);
 				printf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
 				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
@@ -139,11 +139,11 @@ void Thermostat(void)
 				SetRelayState(COMPRESSOR, 1);
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
-				ThermostatState = OFF_LOCKED;
+				ChangeState(OFF_LOCKED);
 			}
 			break;
 		case RECOVERABLE_ERROR:			
-			if(EventTimer_s>RECOVERABLE_ERROR_PERIOD_ON) ThermostatState = OFF_LOCKED;
+			if(EventTimer_s>RECOVERABLE_ERROR_PERIOD_ON) ChangeState(OFF_LOCKED);
 			SetRelayState(COMPRESSOR, 1);
 			SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 			SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);			
@@ -166,13 +166,8 @@ void Task_1000ms(void)
 	ProcessFlow_s();
 	MeasureTemperature();
 	CheckTemperatureRanges();
-	ProcessStateMachine_s();	
-//	ProcessStateMachine_s();
-//	timestamp = GetTimestamp();	
-//	if(timestamp/10==0)
-//	{
-//		SendDebugMessage(0x10, (uint8_t*)timestamp);
-//	}
+	ProcessStateMachine_s();
+	timer_Tick();
 }
 
 int main(void)
@@ -183,7 +178,7 @@ int main(void)
 	printf("Init_WaterFlow\n");
 	Init_Relays();
 	printf("Init_Relays\n");
-	Init_Timer(&Task_1000ms);	
+	timer_Init(&Task_1000ms);	
 	printf("Init_Timer\n");		
 	sei();
 	uart_init();	

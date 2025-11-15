@@ -8,10 +8,10 @@
 typedef void (*Task_1_T)(void);
 
 Task_1_T Task_1;
-uint32_t Timestamp = 0;	// 10th of s (1Tick = 100ms)
+uint32_t Timestamp_s = 0;	// uptime
 uint16_t EventTimer_s = 0;
 
-void Init_Timer(void *Task_1000ms)
+void timer_Init(void *Task_1000ms)
 {
 	TCNT1 = 65535 - 62500;	
 	TCCR1B = (1<<CS12);	// Fosc/256	
@@ -19,11 +19,10 @@ void Init_Timer(void *Task_1000ms)
 	Task_1 = Task_1000ms;
 }
 
-
 // 16 000 000 / 256 = 62500
 ISR(TIMER1_OVF_vect)
 {
-	Timestamp++;
+	Timestamp_s++;
 	TCNT1 = 65535 - 62500;	// 1s
 	//TCNT1 = 65535 - 6250;	// 100ms
 //	SendBootupMessage(0xAA);
@@ -31,9 +30,14 @@ ISR(TIMER1_OVF_vect)
 	EventTimer_s++;
 }
 
-uint32_t GetTimestamp(void)
+void timer_Tick(void)
 {
-	return(Timestamp);
+	Timestamp_s++;
+}
+
+uint32_t timer_GetTimestamp_s(void)
+{
+	return(Timestamp_s);
 }
 
 uint16_t GetEventTimer_s(void)

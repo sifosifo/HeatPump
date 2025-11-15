@@ -52,7 +52,7 @@ uint16_t GetPower_W(uint8_t SensorIndex)
 	}
 }
 
-#define FLOW_NUMERATOR_USED 100	// Timis seems to be off, to compensate, added magix constant
+#define FLOW_NUMERATOR_USED 120	// Timis seems to be off, to compensate, added magix constant
 // --- WARNING CHECK ---
 #if (FLOW_NUMERATOR_USED != 50)
 #warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."

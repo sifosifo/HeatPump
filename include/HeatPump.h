@@ -1,10 +1,26 @@
 #ifndef HEATPUMP_H_
 #define HEATPUMP_H_
 
-typedef enum {POST, BOOT, BOOT_ERROR,
-	OFF_COOLDOWN, OFF_LOCKED, OFF_,
-	ON_FLOW_CHECKING, ON_LOCKED, ON_,
-	MACHINE_OK, RECOVERABLE_ERROR, FATAL_ERROR} hp_state;
+#include <avr/pgmspace.h>
+
+typedef enum {	POST, 				BOOT, 		BOOT_ERROR, OFF_COOLDOWN, 	OFF_LOCKED, 		OFF_,
+				ON_FLOW_CHECKING, 	ON_LOCKED, 	ON_,		MACHINE_OK, 	RECOVERABLE_ERROR, 	FATAL_ERROR} hp_state;
+
+static const char * const state_names[] PROGMEM =
+{
+	"POST",
+	"BOOT",
+	"BOOT_ERROR",
+    "OFF_COOLDOWN",
+    "OFF_LOCKED",
+    "OFF",
+    "ON_FLOW_CHECKING",
+    "ON_LOCKED",
+    "ON",
+	"MACHINE_OK",
+    "RECOVERABLE_ERROR",
+    "FATAL_ERROR"
+};
 
 typedef enum {PRIMARY_SIDE, SECONDARY_SIDE, SENSOR_COUNT} sensor_index;
 

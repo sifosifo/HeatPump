@@ -27,7 +27,7 @@ static struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 /* ------------------------------------------------------------------
    Target & ranges
    ------------------------------------------------------------------ */
-uint16_t TargetTankTemperature          = 50 * 16;
+uint16_t TargetTankTemperature          = 45 * 16;
 uint16_t TargetTankTemperatureHysteresis = 2 * 16;
 
 #define MIN 0
@@ -64,11 +64,11 @@ uint8_t MeasureTemperature(void)
 {
     uint8_t total_errors = 0;
 
-    printf("T:");
+//    printf("T:");
 
     for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
         if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) {
-            printf(" NC");
+//            printf(" NC");
             ++total_errors;
             continue;
         }
@@ -78,16 +78,16 @@ uint8_t MeasureTemperature(void)
         if (temp == ENOTPRESENT) {
             Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;
             Tsensors[i].temperature = 0x8000;
-            printf(" ERR");
+//            printf(" ERR");
             ++total_errors;
             if (Tsensors[i].error_counter < 255) ++Tsensors[i].error_counter;
         } else {
             Tsensors[i].temperature = temp;
             Tsensors[i].error_counter = 0;
-            printf(" %dC", temp / 16);
+//            printf(" %dC", temp / 16);
         }
     }
-    printf("\n");
+//    printf("\n");
     return total_errors;
 }
 
@@ -133,18 +133,18 @@ uint8_t GetTankTemperatureState(void)
 {
     int16_t t = GetTemperature(TANK_TOP);
     if (t == 0x8000) {
-        printf("Tank sensor error!\n");
+//        printf("Tank sensor error!\n");
         return TEMPERATURE_IN_RANGE;
     }
-    printf("Tank temperature %dC\n", t / 16);
+//    printf("Tank temperature %dC\n", t / 16);
     if (t < TARGET_TANK_TEMPERATURE_LOW) {
-        printf("Temperature below range\n");
+//        printf("Temperature below range\n");
         return TEMPERATURE_BELOW_THRESHOLD;
     }
     if (t > TARGET_TANK_TEMPERATURE_HIGH) {
-        printf("Temperature above range\n");
+//        printf("Temperature above range\n");
         return TEMPERATURE_ABOVE_THRESHOLD;
     }
-    printf("Temperature in range\n");
+//    printf("Temperature in range\n");
     return TEMPERATURE_IN_RANGE;
 }
