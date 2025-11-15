@@ -11,7 +11,9 @@
 
 typedef enum {RESERVED, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
 	READ_TANK, READ_ENERGY, READ_COP, GET_STATUS, 
-	READ_ACTIVE_ERRORS, READ_ERROR_HISTORY} actions_index;
+	READ_ACTIVE_ERRORS, READ_ERROR_HISTORY, PARAMETERS} actions_index;
+
+typedef enum {TARGET_TEMP, HYSTERESIS_TEMP} parameter_index;
 
 typedef struct
 {
@@ -29,6 +31,8 @@ typedef struct
 	} data;
 
 } can_custom_t;
+
+volatile uint8_t hack = 0;
 
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
@@ -165,9 +169,8 @@ void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
 uint8_t Init_ComInterface(void)
 {
 	uint8_t result = 0;
-//	printf("CAN\n");
-	// Initialize MCP2515
-	result = can_init(BITRATE_250_KBPS);
+//	printf("CAN\n");	
+	result = can_init(BITRATE_250_KBPS);	// Initialize MCP2515
 	
 	if(result == 0)
 	{	// Error - not possible to initialise		
@@ -216,8 +219,6 @@ ISR(PCINT0_vect)
 	int16_t tmp;
 
 	can_get_message((can_t*)(&msg));
-	//can_get_message(&msg);
-	//can_send_message(&msg);
 
 	// Even ID is request, Odd ID is reply
 	// Request ID is BASE_CAN_ID + message_id * 2
@@ -253,6 +254,19 @@ ISR(PCINT0_vect)
 		can_send_message((can_t*)(&msg));
 		break;
 	case BASE_CAN_ID+READ_TANK*2:
+		msg.length = 4;
+		msg.data.word[0] = GetTemperature(TANK_TOP);
+		msg.data.word[1] = GetTemperature(TANK_BOTTOM);		
+		can_send_message((can_t*)(&msg));
+		break;
+	case BASE_CAN_ID+PARAMETERS*2:
+		hack = msg.data.byte[TARGET_TEMP];
+		if(hack!=NO_CHANGE)
+		{
+			printf("Set: %d\n", hack);
+			temp_SetTargetTemperature(hack);
+		}
+		printf("Received: %d\n", hack);
 		msg.length = 4;
 		msg.data.word[0] = GetTemperature(TANK_TOP);
 		msg.data.word[1] = GetTemperature(TANK_BOTTOM);		

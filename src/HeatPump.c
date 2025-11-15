@@ -18,6 +18,7 @@ uint8_t POST_status = 0;
 uint8_t ActiveErrors = 0;
 uint8_t CurrentState = OFF_LOCKED;
 static uint32_t StateEntryTime = 0;
+volatile uint8_t Process_1s = 0;	// flag indicating when to process 1s tasks
 
 static inline const char *GetStateName(uint8_t s)
 {
@@ -161,13 +162,9 @@ void ProcessStateMachine_s(void)
 
 void Task_1000ms(void)
 {
-	uint32_t timestamp;
-
-	ProcessFlow_s();
-	MeasureTemperature();
-	CheckTemperatureRanges();
-	ProcessStateMachine_s();
-	timer_Tick();
+	ProcessFlow_s();	// Time sensitive as it counts impulses, power calculation maybe should not be here
+	timer_Tick();		// Maintain uptime timestamp
+	Process_1s = 1;		// Trigger 1s tasks
 }
 
 int main(void)
@@ -181,28 +178,22 @@ int main(void)
 	timer_Init(&Task_1000ms);	
 	printf("Init_Timer\n");		
 	sei();
-	uart_init();	
-//	UDR0 = 'V';
+	uart_init();
 	printf("--------------Booting----------------\n");	
 	//RunPOST();	
 	while (1)	// Idle loop
 	{		
-		
 		#ifndef DEBUG
 		CheckIfCANIsActive();	
 		#endif
-		//err = MeasureTemperature();
 
-	/*
-		- Check if temperature sensors present -> TempSensPresent
-		- If TempSensPresent, check if temperature in range -> TempOK		
-		- CAN initialization is not correct, after power reset (also CAN board has power reset), all ok
-		After button/SW reset, CAN initialization fails
-		- reset is caused by connecting? dissconecting? absent? serial connection
-		- secondary power value is not correct - too high
-		- values at web page are not updated all the time
-		*/
-				
+		if(Process_1s)
+		{
+			MeasureTemperature();
+			CheckTemperatureRanges();
+			ProcessStateMachine_s();
+			Process_1s = 0;	// Reset flag
+		}			
 	}	
 	return 0;
 }

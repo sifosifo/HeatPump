@@ -27,8 +27,10 @@ static struct Tsensor Tsensors[TEMPERATURE_SENSOR_COUNT] = {
 /* ------------------------------------------------------------------
    Target & ranges
    ------------------------------------------------------------------ */
-uint16_t TargetTankTemperature          = 45 * 16;
+uint16_t TargetTankTemperature          = 10 * 16;
 uint16_t TargetTankTemperatureHysteresis = 2 * 16;
+uint16_t TargetTankTemperatureHigh      = 0;
+uint16_t TargetTankTemperatureLow       = 0;
 
 #define MIN 0
 #define MAX 1
@@ -38,8 +40,18 @@ static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {
     {  5, 60}, {  5, 60}
 };
 
-#define TARGET_TANK_TEMPERATURE_LOW  (TargetTankTemperature - TargetTankTemperatureHysteresis/2)
-#define TARGET_TANK_TEMPERATURE_HIGH (TargetTankTemperature + TargetTankTemperatureHysteresis/2)
+void    temp_SetTargetTemperature(uint8_t value)
+{
+    TargetTankTemperature = value * 4;
+    TargetTankTemperatureHigh = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
+    TargetTankTemperatureLow = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
+    printf("TT TL TH: %d, %d, %d\n", TargetTankTemperature, TargetTankTemperatureLow, TargetTankTemperatureHigh);
+}
+
+uint8_t temp_GetTargetTemperature(void)
+{
+    return(TargetTankTemperature/4);
+}
 
 /* ------------------------------------------------------------------
    Init
@@ -137,11 +149,11 @@ uint8_t GetTankTemperatureState(void)
         return TEMPERATURE_IN_RANGE;
     }
 //    printf("Tank temperature %dC\n", t / 16);
-    if (t < TARGET_TANK_TEMPERATURE_LOW) {
+    if (t < TargetTankTemperatureLow) {
 //        printf("Temperature below range\n");
         return TEMPERATURE_BELOW_THRESHOLD;
     }
-    if (t > TARGET_TANK_TEMPERATURE_HIGH) {
+    if (t > TargetTankTemperatureHigh) {
 //        printf("Temperature above range\n");
         return TEMPERATURE_ABOVE_THRESHOLD;
     }
