@@ -7,6 +7,7 @@
 #include <util/delay.h>
 #include "HeatPump.h"
 #include "errors.h"
+#include "callbacks.h"
 
 /* ------------------------------------------------------------------
    Sensor table
@@ -66,7 +67,7 @@ void temp_SetHysteresisTemperature(uint8_t value)
 
 uint8_t temp_GetHysteresisTemperature(void)
 {
-    printf("Get HT%d", TargetTankTemperatureHysteresis);
+    //printf("Get HT%d", TargetTankTemperatureHysteresis);
     return(TargetTankTemperatureHysteresis/4);
 }
 
@@ -83,6 +84,8 @@ void Init_Temperature(void)
         Tsensors[i].state = (rc == 1) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
         Tsensors[i].error_counter = (rc == 1) ? 0 : 1;
         Tsensors[i].temperature = 0;
+
+        if(Tsensors[i].state != TEMPERATURE_SENSOR_OK) notify_error(i, INIT_ERROR);
     }
 }
 
@@ -98,6 +101,7 @@ uint8_t MeasureTemperature(void)
     for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
         if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) {
 //            printf(" NC");
+            notify_error(i, NOT_CONNECTED);
             ++total_errors;
             continue;
         }
@@ -106,6 +110,7 @@ uint8_t MeasureTemperature(void)
 
         if (temp == ENOTPRESENT) {
             Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;   // Do not update value, just flag sensor as absent
+            notify_error(i, NOT_CONNECTED);
             ++total_errors;
             if (Tsensors[i].error_counter < 255) ++Tsensors[i].error_counter;
         } else {
@@ -123,13 +128,20 @@ uint8_t MeasureTemperature(void)
    ------------------------------------------------------------------ */
 void CheckTemperatureRanges(void)
 {
-    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
-        if (Tsensors[i].state != TEMPERATURE_SENSOR_OK || Tsensors[i].temperature == 0x8000) continue;
+    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i)
+    {
+        if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) continue;
+
         int8_t t = Tsensors[i].temperature / 16;
         if (t < TemperatureRanges[i][MIN])
+        {
+            notify_error(i, TOO_LOW);
             printf("T%d LOW: %d < %d\n", i, t, TemperatureRanges[i][MIN]);
-        else if (t > TemperatureRanges[i][MAX])
+        }else if (t > TemperatureRanges[i][MAX])
+        {
+            notify_error(i, TOO_HIGH);
             printf("T%d HIGH: %d > %d\n", i, t, TemperatureRanges[i][MAX]);
+        }
     }
 }
 
@@ -142,10 +154,7 @@ int16_t GetTemperature(uint8_t index)
 uint8_t GetTankTemperatureState(void)
 {
     int16_t t = GetTemperature(TANK_TOP);
-    if (t == 0x8000) {
-//        printf("Tank sensor error!\n");
-        return TEMPERATURE_IN_RANGE;
-    }
+
 //    printf("Tank temperature %dC\n", t / 16);
     if (t < TargetTankTemperatureLow) {
 //        printf("Temperature below range\n");

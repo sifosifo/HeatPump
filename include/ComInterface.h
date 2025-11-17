@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #define BASE_CAN_ID	0x100
-#define NO_CHANGE   255     // writing 255 to parameter will result to no change
+#define NO_CHANGE   255U     // writing 255 to parameter will result to no change
 #define CAN_TX_QUEUE_SIZE  16
 
 uint8_t Init_ComInterface(void);

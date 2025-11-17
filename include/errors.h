@@ -1,13 +1,3 @@
-
-typedef enum {
-	CAN,
-	TEMPERATURE,
-	GENERAL,
-	RELAY,
-	TIMER,
-	MODULE_COUNT
-} module;
-
 #define MODULE_ID	0
 #define ERROR_ID	1
 
