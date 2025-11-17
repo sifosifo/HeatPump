@@ -40,17 +40,34 @@ static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] = {
     {  5, 60}, {  5, 60}
 };
 
+void recalculateThresholds(void)
+{
+    TargetTankTemperatureHigh = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
+    TargetTankTemperatureLow = TargetTankTemperature - TargetTankTemperatureHysteresis/2;
+    printf("TT TL TH: %d, %d, %d\n", TargetTankTemperature/16, TargetTankTemperatureLow/16, TargetTankTemperatureHigh/16);
+}
+
 void    temp_SetTargetTemperature(uint8_t value)
 {
     TargetTankTemperature = value * 4;
-    TargetTankTemperatureHigh = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
-    TargetTankTemperatureLow = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
-    printf("TT TL TH: %d, %d, %d\n", TargetTankTemperature, TargetTankTemperatureLow, TargetTankTemperatureHigh);
+    recalculateThresholds();
 }
 
 uint8_t temp_GetTargetTemperature(void)
 {
     return(TargetTankTemperature/4);
+}
+
+void temp_SetHysteresisTemperature(uint8_t value)
+{
+    TargetTankTemperatureHysteresis = value * 4;
+    recalculateThresholds();
+}
+
+uint8_t temp_GetHysteresisTemperature(void)
+{
+    printf("Get HT%d", TargetTankTemperatureHysteresis);
+    return(TargetTankTemperatureHysteresis/4);
 }
 
 /* ------------------------------------------------------------------
@@ -65,7 +82,7 @@ void Init_Temperature(void)
         uint8_t rc = ds18b20_init(&Tsensors[i].ds);
         Tsensors[i].state = (rc == 1) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
         Tsensors[i].error_counter = (rc == 1) ? 0 : 1;
-        Tsensors[i].temperature = 0x8000;
+        Tsensors[i].temperature = 0;
     }
 }
 
@@ -88,9 +105,7 @@ uint8_t MeasureTemperature(void)
         int16_t temp = ds18b20_read_temperature(&Tsensors[i].ds);
 
         if (temp == ENOTPRESENT) {
-            Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;
-            Tsensors[i].temperature = 0x8000;
-//            printf(" ERR");
+            Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;   // Do not update value, just flag sensor as absent
             ++total_errors;
             if (Tsensors[i].error_counter < 255) ++Tsensors[i].error_counter;
         } else {
@@ -122,23 +137,6 @@ int16_t GetTemperature(uint8_t index)
 {
     if (Tsensors[index].state != TEMPERATURE_SENSOR_OK) return 0x8000;
     return Tsensors[index].temperature;
-}
-
-int16_t GetDeltaTemperature(uint8_t sensor_index)
-{
-    if (sensor_index == PRIMARY_SIDE) {
-        int16_t in  = GetTemperature(PRIMARY_SIDE_INLET);
-        int16_t out = GetTemperature(PRIMARY_SIDE_OUTLET);
-        if (in == 0x8000 || out == 0x8000) return 0xFFFF;
-        return in - out;
-    }
-    if (sensor_index == SECONDARY_SIDE) {
-        int16_t out = GetTemperature(SECONDARY_SIDE_OUTLET);
-        int16_t in  = GetTemperature(SECONDARY_SIDE_INLET);
-        if (out == 0x8000 || in == 0x8000) return 0xFFFF;
-        return out - in;
-    }
-    return 0xFFFF;
 }
 
 uint8_t GetTankTemperatureState(void)

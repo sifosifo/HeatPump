@@ -2,8 +2,10 @@
 
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>	// for WTD reset
 #include <stdlib.h>
 #include <util/delay.h>
+#include <string.h>		// memcpy
 
 #include "Temperature.h"
 #include "WaterFlow.h"
@@ -154,7 +156,7 @@ void ProcessStateMachine_s(void)
 			error_Halt();
 			break;
 		default:
-			printf("Error Thermostat.\n");
+			printf("Non-existent state %d.\n", CurrentState);
 			error_Halt();
 			break;
 	}
@@ -168,7 +170,11 @@ void Task_1000ms(void)
 }
 
 int main(void)
-{	
+{
+	uint8_t errors = 0;
+	uint32_t uptime;
+
+	wdt_disable();
 	Init_Temperature();
 	printf("Init_Temperature\n");
 	Init_WaterFlow();
@@ -180,7 +186,8 @@ int main(void)
 	sei();
 	uart_init();
 	printf("--------------Booting----------------\n");	
-	//RunPOST();	
+	//RunPOST();
+	temp_SetTargetTemperature(180);	
 	while (1)	// Idle loop
 	{		
 		#ifndef DEBUG
@@ -189,11 +196,27 @@ int main(void)
 
 		if(Process_1s)
 		{
-			MeasureTemperature();
-			CheckTemperatureRanges();
-			ProcessStateMachine_s();
+			errors = MeasureTemperature();
+			if(errors==0)
+			{
+				CheckTemperatureRanges();
+				ProcessStateMachine_s();
+			}else
+			{
+				printf("Init_Temperature\n");
+				Init_Temperature();		// try to recover temperature sensors
+			}
 			Process_1s = 0;	// Reset flag
-		}			
+			uint8_t msg[8];
+			uptime = timer_GetTimestamp_s();
+			memcpy(&msg[4], &uptime, 4);
+			msg[0] = 0xa4;
+			msg[1] = 2;
+			msg[2] = 5;
+			msg[3] = 0;
+			can_SendErrorMsg(&msg);
+		}
+		can_process();	// Send messages from queue	
 	}	
 	return 0;
 }

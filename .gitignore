@@ -8,6 +8,8 @@ build/
 *.eep
 *.map
 
+serial.log
+
 # VS Code
 .vscode/
 *.code-workspace

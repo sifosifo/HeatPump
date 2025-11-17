@@ -1,6 +1,9 @@
 #include "ComInterface.h"
 #include <stdint.h>
+#include <avr/io.h>
+#include <string.h>		// memcpy
 #include <avr/interrupt.h>
+#include <avr/wdt.h>	// for WTD reset
 #include <util/delay.h>
 #include "can.h"
 #include "Temperature.h"
@@ -8,12 +11,13 @@
 #include "Relays.h"
 #include "HeatPump.h"
 #include "uart.h"
+#include "errors.h"
 
 typedef enum {RESERVED, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
 	READ_TANK, READ_ENERGY, READ_COP, GET_STATUS, 
 	READ_ACTIVE_ERRORS, READ_ERROR_HISTORY, PARAMETERS} actions_index;
 
-typedef enum {TARGET_TEMP, HYSTERESIS_TEMP} parameter_index;
+typedef enum {TARGET_TEMP, HYSTERESIS_TEMP, RESET} parameter_index;
 
 typedef struct
 {
@@ -32,7 +36,10 @@ typedef struct
 
 } can_custom_t;
 
-volatile uint8_t hack = 0;
+static uint8_t err_tx_queue[CAN_TX_QUEUE_SIZE];
+static volatile uint8_t tx_head = 0;
+static volatile uint8_t tx_tail = 0;
+static volatile uint8_t tx_count = 0;
 
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
@@ -213,10 +220,38 @@ void CheckIfCANIsActive(void)
 	}
 }
 
+void force_reset()
+{
+//	printf("Reset requested");
+
+//	uint8_t wdt_value = WDTCSR;
+//	printf("%d\n", wdt_value);
+
+cli();
+MCUSR = 0;
+
+// Step 1: enable timed sequence
+__asm__ __volatile__ (
+    "sts %[wdtcsr], %[wdce_wde] \n\t"
+    "sts %[wdtcsr], %[wde_15ms] \n\t"
+    :
+    : [wdtcsr] "i" (_SFR_MEM_ADDR(WDTCSR)),
+      [wdce_wde] "r" ((uint8_t)((1<<WDCE) | (1<<WDE))),
+      [wde_15ms] "r" ((uint8_t)((1<<WDE) | WDTO_15MS))
+);
+//	wdt_value = WDTCSR;
+//	printf("%d\n", wdt_value);
+
+
+    // Step 4: Wait for reset
+    while (1);
+}
+
 ISR(PCINT0_vect)
 {
 	can_custom_t msg;	
 	int16_t tmp;
+	int8_t tmp8;
 
 	can_get_message((can_t*)(&msg));
 
@@ -242,7 +277,7 @@ ISR(PCINT0_vect)
 		msg.data.word[0] = GetTemperature(PRIMARY_SIDE_INLET);		
 		msg.data.word[1] = GetTemperature(PRIMARY_SIDE_OUTLET);
 		msg.data.byte[4] = GetFlow_dclmin(PRIMARY_SIDE);		
-		msg.data.word[3] = GetPower_W(PRIMARY_SIDE);
+		msg.data.word[3] = 0;
 		can_send_message((can_t*)(&msg));
 		break;
 	case BASE_CAN_ID+READ_SECONDARY*2:
@@ -250,7 +285,7 @@ ISR(PCINT0_vect)
 		msg.data.word[0] = GetTemperature(SECONDARY_SIDE_INLET);
 		msg.data.word[1] = GetTemperature(SECONDARY_SIDE_OUTLET);
 		msg.data.byte[4] = GetFlow_dclmin(SECONDARY_SIDE);		
-		msg.data.word[3] = GetPower_W(SECONDARY_SIDE);
+		msg.data.word[3] = 0;
 		can_send_message((can_t*)(&msg));
 		break;
 	case BASE_CAN_ID+READ_TANK*2:
@@ -260,16 +295,27 @@ ISR(PCINT0_vect)
 		can_send_message((can_t*)(&msg));
 		break;
 	case BASE_CAN_ID+PARAMETERS*2:
-		hack = msg.data.byte[TARGET_TEMP];
-		if(hack!=NO_CHANGE)
+		tmp8 = msg.data.byte[TARGET_TEMP];
+		if(tmp8!=NO_CHANGE)
 		{
-			printf("Set: %d\n", hack);
-			temp_SetTargetTemperature(hack);
+			printf("Set TT: %d\n", tmp8);
+			temp_SetTargetTemperature(tmp8);
 		}
-		printf("Received: %d\n", hack);
-		msg.length = 4;
-		msg.data.word[0] = GetTemperature(TANK_TOP);
-		msg.data.word[1] = GetTemperature(TANK_BOTTOM);		
+		tmp8 = msg.data.byte[HYSTERESIS_TEMP];
+		if(tmp8!=NO_CHANGE)
+		{
+			printf("Set TH: %d\n", tmp8);
+			temp_SetHysteresisTemperature(tmp8);
+		}
+		if(msg.data.byte[RESET]==0xA5)
+		{
+			printf("Requesting reset\n");
+			error_Halt();
+			force_reset();
+		}
+		msg.length = 2;
+		msg.data.byte[0] = temp_GetTargetTemperature();
+		msg.data.byte[1] = temp_GetHysteresisTemperature();		
 		can_send_message((can_t*)(&msg));
 		break;
 	default:
@@ -277,5 +323,40 @@ ISR(PCINT0_vect)
 	}
 }
 
+void can_SendErrorMsg(const uint8_t *data)
+{
+    if (tx_count >= CAN_TX_QUEUE_SIZE) return;  // queue full → drop or handle
 
+    uint8_t next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
+    memcpy(&err_tx_queue[tx_head], data, 8);
 
+    tx_head = next;
+    __asm__("sei");            // atomic increment
+    tx_count++;
+}
+
+/* Call this from main loop as fast as possible */
+void can_process(void)
+{
+	can_custom_t msg;
+
+	msg.id 				= BASE_CAN_ID + READ_ACTIVE_ERRORS*2 + 1;
+	msg.length			= 8;
+	msg.flags.extended 	= 0;
+	msg.flags.rtr 		= 0;
+
+    if (tx_count == 0) return;
+
+    /* If hardware TX buffer/mailbox is free → send next frame */
+    if (true) /* your CAN controller TX ready flag */
+	{
+		uint8_t *f = &err_tx_queue[tx_tail];
+
+		for (uint8_t i = 0; i < 8; i++) msg.data.byte[i] = f[i];
+        
+		can_send_message((can_t*)(&msg));
+        
+        tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
+        tx_count--;
+    }
+}

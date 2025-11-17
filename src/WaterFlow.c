@@ -1,14 +1,9 @@
 #include <avr/interrupt.h>
 #include <stdio.h>
 #include "WaterFlow.h"
-#include "Constants.h"
-#include "HeatPump.h"
-#include "ComInterface.h"
-#include "Temperature.h"
 
 uint8_t Pulses[FLOW_SENSOR_COUNT];
 uint8_t Flows_dclmin[FLOW_SENSOR_COUNT];
-uint16_t Power_W[FLOW_SENSOR_COUNT];
 
 void Init_WaterFlow(void)
 {
@@ -41,18 +36,7 @@ uint8_t GetFlow_dclmin(uint8_t SensorIndex)
 	}
 }
 
-uint16_t GetPower_W(uint8_t SensorIndex)
-{
-	if(SensorIndex<FLOW_SENSOR_COUNT)
-	{
-		return(Power_W[SensorIndex]);
-	}else
-	{
-		return(0xFF);
-	}
-}
-
-#define FLOW_NUMERATOR_USED 120	// Timis seems to be off, to compensate, added magix constant
+#define FLOW_NUMERATOR_USED 125	// Timig seems to be off, to compensate, added magix constant
 // --- WARNING CHECK ---
 #if (FLOW_NUMERATOR_USED != 50)
 #warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."
@@ -71,34 +55,11 @@ void ProcessFlow_s(void)
 	uint32_t tmp;
 	int16_t deltaT;
 	
-	//SendBootupMessage2(Pulses[0]);
-	
 	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
 		//Flows_dclmin[i] *= 10;SecondaryFlow_dcl
 		//tmp = (uint32_t)Pulses * (uint32_t)[kg/m3] * (uint32_t)WaterSpecHeatCap[temperature] / (uint32_t)110;
-
-		deltaT = GetDeltaTemperature(i);
-		if(deltaT<0)deltaT=0;
-		//deltaT = 4*16;
-		if(i==0)
-		{
-			tmp = (uint32_t)Pulses[i] * (uint32_t)920;	//
-			//tmp *= (uint32_t)(((4200*65)+(2500*35))/100);	// 4200 water, 2500 ethanol
-			tmp *= (uint32_t)3605;	// 4200 water, 2500 ethanol
-		}else
-		{
-		tmp = (uint32_t)Pulses[i] * (uint32_t)980;
-			tmp *= (uint32_t)4180;	// 4200 water
-		}
-		tmp /= (uint32_t)110;	
-		tmp *= (uint32_t)deltaT;
-		tmp /= (uint32_t)3600;
-		tmp /= (uint16_t)16;
-		Power_W[i] = (uint16_t)tmp;		
-		//Power_W[i]	=  (uint16_t)(tmp *  / (uint32_t)3600)/(uint16_t)(16);		
-		//Power_W[i]	=  (uint16_t)(tmp * (uint32_t)deltaT / (uint32_t)360)/(uint16_t)(16);
 		Pulses[i] = 0;	// reset counter
 	}
 }
@@ -114,8 +75,11 @@ uint8_t WaterFlowNominal(void)
 	if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
 	{
 		nominal = 1;
+	}else
+	{
+	printf("PF, SF, nominal %d, %d, %d\n", PrimaryFlow_dcl, SecondaryFlow_dcl, nominal);
 	}
-
+	
 	return(nominal);
 }
 
