@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <avr/io.h>
 
-
-
-typedef enum {PRIMARY_CIRCULATION_PUMP, SECONDARY_CIRCULATION_PUMP, COMPRESSOR, RELAY_COUNT} relay_index;
+typedef enum {PRIMARY_CIRCULATION_PUMP, SECONDARY_CIRCULATION_PUMP, COMPRESSOR, AUX, RELAY_COUNT} relay_index;
 
 #define ON	(uint8_t)0
 #define OFF	(uint8_t)1

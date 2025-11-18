@@ -5,7 +5,8 @@
 struct relay Relays[RELAY_COUNT] = {
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 5, OFF, 0,
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 6, OFF, 0,
-	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 7, OFF, 0};
+	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 7, OFF, 0,
+	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 4, OFF, 0,};
 
 void DriveRelay(uint8_t relay_id)
 {
@@ -52,7 +53,15 @@ uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 	{
 		if(((mask>>i) & 0x01) == 1)	// Drive output
 		{
-			//SetRelayState(i, (output>>i) & 0x01);	// Used for switching outputs ON/OFF on request from CAN - manual operation
+			if(i == AUX)
+			{
+				printf("AUX:%d", output>>i);
+				//SetRelayState(i, (output>>i) & 0x01);	// Used for switching outputs ON/OFF on request from CAN - manual operation
+			}else
+			{
+				printf("OUT%s:%d", i, output>>i);
+				SetRelayState(i, (output>>i) & 0x01);
+			}
 		}
 		read_output += Relays[i].state<<i;
 	}

@@ -7,13 +7,16 @@ typedef enum {PRIMARY_SIDE, SECONDARY_SIDE, SENSOR_COUNT} sensor_index;
 #define FLOW_SENSOR_COUNT SENSOR_COUNT
 
 // Initialise all variables
-void Init_WaterFlow(void);
+void flow_Init(void);
 
 // Get current flow
-uint8_t GetFlow_dclmin(uint8_t SensorIndex);
+uint8_t flow_GetFlow_dclmin(uint8_t SensorIndex);
 
 // Calculate flow every second
-void ProcessFlow_s(void);
+void flow_Process(void);
+
+// Called at exact time intervals
+void flow_StorePulses_s(void);
 
 // Is flow on both sides nominal (above minimal)
-uint8_t WaterFlowNominal(void);
+uint8_t flow_WaterFlowNominal(void);

@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include "WaterFlow.h"
 
-uint8_t Pulses[FLOW_SENSOR_COUNT];
+uint8_t Pulses[FLOW_SENSOR_COUNT];		// Runtime pulses  - ongoing counting
+uint8_t Pulses_[FLOW_SENSOR_COUNT];		// Captured pulses - input for processing
 uint8_t Flows_dclmin[FLOW_SENSOR_COUNT];
 
-void Init_WaterFlow(void)
+void flow_Init(void)
 {
 	uint8_t i;
 
@@ -13,6 +14,7 @@ void Init_WaterFlow(void)
 	for(i = 0; i++; i < FLOW_SENSOR_COUNT)
 	{
 		Pulses[i] = 0;
+		Pulses_[i] = 0;
 		Flows_dclmin[i] = 0;
 	}
 
@@ -25,7 +27,7 @@ void Init_WaterFlow(void)
 	EIMSK |= (1<<INT0) | (1<<INT1);
 }
 
-uint8_t GetFlow_dclmin(uint8_t SensorIndex)
+uint8_t flow_GetFlow_dclmin(uint8_t SensorIndex)
 {
 	if(SensorIndex<FLOW_SENSOR_COUNT)
 	{
@@ -36,7 +38,16 @@ uint8_t GetFlow_dclmin(uint8_t SensorIndex)
 	}
 }
 
-#define FLOW_NUMERATOR_USED 125	// Timig seems to be off, to compensate, added magix constant
+void flow_StorePulses_s(void)		// Do minimum in interrupt - just store
+{
+	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
+	{
+		Pulses_[i] = Pulses[i];
+		Pulses[i] = 0;	// reset counter
+	}
+}
+
+#define FLOW_NUMERATOR_USED 120	// Timig seems to be off, to compensate, added magix constant
 // --- WARNING CHECK ---
 #if (FLOW_NUMERATOR_USED != 50)
 #warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."
@@ -49,29 +60,22 @@ uint8_t GetFlow_dclmin(uint8_t SensorIndex)
 //	Q[l/min]	= pulses / 6,6s
 //	Q[dcl/min]	= pulses * 10 / 6,6s
 //	Q[dcl/min]	= pulses * 100 / 66s
-void ProcessFlow_s(void)
+void flow_Process(void)
 {
-	uint8_t i;
-	uint32_t tmp;
-	int16_t deltaT;
-	
-	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
+	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
-		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
-		//Flows_dclmin[i] *= 10;SecondaryFlow_dcl
-		//tmp = (uint32_t)Pulses * (uint32_t)[kg/m3] * (uint32_t)WaterSpecHeatCap[temperature] / (uint32_t)110;
-		Pulses[i] = 0;	// reset counter
+		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);		
 	}
 }
 
-uint8_t WaterFlowNominal(void)
+uint8_t flow_WaterFlowNominal(void)
 {
 	uint8_t nominal = 0;
 	uint8_t PrimaryFlow_dcl;
 	uint8_t SecondaryFlow_dcl;
 
-	PrimaryFlow_dcl = GetFlow_dclmin(PRIMARY_SIDE);
-	SecondaryFlow_dcl = GetFlow_dclmin(SECONDARY_SIDE);
+	PrimaryFlow_dcl = flow_GetFlow_dclmin(PRIMARY_SIDE);
+	SecondaryFlow_dcl = flow_GetFlow_dclmin(SECONDARY_SIDE);
 	if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
 	{
 		nominal = 1;

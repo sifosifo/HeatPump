@@ -269,14 +269,14 @@ ISR(PCINT0_vect)
 		break;
 	case BASE_CAN_ID+DRIVE_OUTPUT*2:
 		msg.length = 1;
-		msg.data.byte[0] = DriveOutputsByCAN(msg.data.byte[1], msg.data.byte[2]);
+		msg.data.byte[0] = DriveOutputsByCAN(msg.data.byte[0], msg.data.byte[1]);
 		can_send_message((can_t*)(&msg));
 		break;	
 	case BASE_CAN_ID+READ_PRIMARY*2:
 		msg.length = 8;		
 		msg.data.word[0] = GetTemperature(PRIMARY_SIDE_INLET);		
 		msg.data.word[1] = GetTemperature(PRIMARY_SIDE_OUTLET);
-		msg.data.byte[4] = GetFlow_dclmin(PRIMARY_SIDE);		
+		msg.data.byte[4] = flow_GetFlow_dclmin(PRIMARY_SIDE);		
 		msg.data.word[3] = 0;
 		can_send_message((can_t*)(&msg));
 		break;
@@ -284,7 +284,7 @@ ISR(PCINT0_vect)
 		msg.length = 8;
 		msg.data.word[0] = GetTemperature(SECONDARY_SIDE_INLET);
 		msg.data.word[1] = GetTemperature(SECONDARY_SIDE_OUTLET);
-		msg.data.byte[4] = GetFlow_dclmin(SECONDARY_SIDE);		
+		msg.data.byte[4] = flow_GetFlow_dclmin(SECONDARY_SIDE);		
 		msg.data.word[3] = 0;
 		can_send_message((can_t*)(&msg));
 		break;

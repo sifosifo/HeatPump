@@ -32,8 +32,8 @@ static void on_error_detected(uint8_t error_code, uint8_t type)
 
     payload[0] = ((error_code & 0x0F) << 4) | (type & 0x0F);
     payload[1] = CurrentState;									// Current state machine state
-    payload[2] = ((now - StateEntryTime) >> 8) & 0xFF;       // ← added in main
-    payload[3] = (now - StateEntryTime) & 0xFF;      		// ← added in main
+    payload[2] = ((now - StateEntryTime) >> 8) & 0xFF;
+    payload[3] = (now - StateEntryTime) & 0xFF;
     payload[4] = (uint8_t)(now >> 24);
     payload[5] = (uint8_t)(now >> 16);
     payload[6] = (uint8_t)(now >> 8);
@@ -98,7 +98,7 @@ void ProcessStateMachine_s(void)
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
 				ClearEventTimer_s();
 			}
-			if(WaterFlowNominal())	// Block heatpump in case of nominal flow detected
+			if(flow_WaterFlowNominal())	// Block heatpump in case of nominal flow detected
 			{	// Circulating pump relay is stuck or error while reading flow sensor
 				// Might cause reading nominal flow when no flow is present - critical error
 				printf("************Flow checking error:*************\n");
@@ -111,12 +111,12 @@ void ProcessStateMachine_s(void)
 			} 	
 			break;
 		case ON_FLOW_CHECKING:			
-			PrimaryFlow_dcl = GetFlow_dclmin(PRIMARY_SIDE);
-			SecondaryFlow_dcl = GetFlow_dclmin(SECONDARY_SIDE);
+			PrimaryFlow_dcl = flow_GetFlow_dclmin(PRIMARY_SIDE);
+			SecondaryFlow_dcl = flow_GetFlow_dclmin(SECONDARY_SIDE);
 			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
 			{
 				printf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
-				if(WaterFlowNominal())
+				if(flow_WaterFlowNominal())
 				{
 					printf("************Flow checking OK:*************\n");
 					printf("Actual/Desired flow after %ds\n", EventTimer_s);
@@ -142,7 +142,7 @@ void ProcessStateMachine_s(void)
 			{
 				ChangeState(ON_);
 			}
-			if(WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
+			if(flow_WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
 				SetRelayState(COMPRESSOR, 1);
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
@@ -159,7 +159,7 @@ void ProcessStateMachine_s(void)
 				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
 			}
-			if(WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
+			if(flow_WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
 				SetRelayState(COMPRESSOR, 1);
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
@@ -186,7 +186,7 @@ void ProcessStateMachine_s(void)
 
 void Task_1000ms(void)
 {
-	ProcessFlow_s();	// Time sensitive as it counts impulses, power calculation maybe should not be here
+	flow_StorePulses_s();	// Just store impulses and process in ProcessFlow_s	
 	timer_Tick();		// Maintain uptime timestamp
 	Process_1s = 1;		// Trigger 1s tasks
 }
@@ -196,26 +196,27 @@ int main(void)
 	uint8_t errors = 0;	
 
 	wdt_disable();
+	timer_Init(&Task_1000ms);
+	printf("Init_Timer\n");
 	Init_Temperature();
 	printf("Init_Temperature\n");
-	Init_WaterFlow();
+	flow_Init();
 	printf("Init_WaterFlow\n");
 	Init_Relays();
 	printf("Init_Relays\n");
-	timer_Init(&Task_1000ms);	
-	printf("Init_Timer\n");		
 	sei();
 	uart_init();
 	printf("--------------Booting----------------\n");
 	register_error_callback(on_error_detected);		// Register callbacks
 	//RunPOST();
+	temp_SetHysteresisTemperature(0);
 	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
 	while (1)	// Idle loop
 	{		
 		#ifndef DEBUG
 		CheckIfCANIsActive();	
 		#endif
-
+		flow_Process();	// Calculate flow from pulses
 		if(Process_1s)
 		{
 			errors = MeasureTemperature();
@@ -229,14 +230,6 @@ int main(void)
 				Init_Temperature();		// try to recover temperature sensors
 			}
 			Process_1s = 0;	// Reset flag
-			/*uint8_t msg[8];
-			uptime = timer_GetTimestamp_s();
-			memcpy(&msg[4], &uptime, 4);
-			msg[0] = 0xa4;
-			msg[1] = 2;
-			msg[2] = 5;
-			msg[3] = 0;
-			can_SendErrorMsg(&msg);*/
 		}
 		can_process();	// Send messages from queue	
 	}	
