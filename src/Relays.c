@@ -55,12 +55,12 @@ uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 		{
 			if(i == AUX)
 			{
-				printf("AUX:%d", output>>i);
-				//SetRelayState(i, (output>>i) & 0x01);	// Used for switching outputs ON/OFF on request from CAN - manual operation
+				printf("AUX:%d/n", output>>i);
+				SetRelayState(i, (output>>i) & 0x01);
 			}else
 			{
 				printf("OUT%s:%d", i, output>>i);
-				SetRelayState(i, (output>>i) & 0x01);
+				//
 			}
 		}
 		read_output += Relays[i].state<<i;

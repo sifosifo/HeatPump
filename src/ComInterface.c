@@ -249,9 +249,8 @@ __asm__ __volatile__ (
 
 ISR(PCINT0_vect)
 {
-	can_custom_t msg;	
-	int16_t tmp;
-	int8_t tmp8;
+	can_custom_t msg;
+	uint8_t tmp8;
 
 	can_get_message((can_t*)(&msg));
 
@@ -296,13 +295,13 @@ ISR(PCINT0_vect)
 		break;
 	case BASE_CAN_ID+PARAMETERS*2:
 		tmp8 = msg.data.byte[TARGET_TEMP];
-		if(tmp8!=NO_CHANGE)
+		if(tmp8!=NO_CHANGE_REQUESTED)
 		{
 			printf("Set TT: %d\n", tmp8);
 			temp_SetTargetTemperature(tmp8);
 		}
 		tmp8 = msg.data.byte[HYSTERESIS_TEMP];
-		if(tmp8!=NO_CHANGE)
+		if(tmp8!=NO_CHANGE_REQUESTED)
 		{
 			printf("Set TH: %d\n", tmp8);
 			temp_SetHysteresisTemperature(tmp8);
