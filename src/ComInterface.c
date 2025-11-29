@@ -232,19 +232,19 @@ MCUSR = 0;
 
 // Step 1: enable timed sequence
 __asm__ __volatile__ (
-    "sts %[wdtcsr], %[wdce_wde] \n\t"
-    "sts %[wdtcsr], %[wde_15ms] \n\t"
-    :
-    : [wdtcsr] "i" (_SFR_MEM_ADDR(WDTCSR)),
-      [wdce_wde] "r" ((uint8_t)((1<<WDCE) | (1<<WDE))),
-      [wde_15ms] "r" ((uint8_t)((1<<WDE) | WDTO_15MS))
+	"sts %[wdtcsr], %[wdce_wde] \n\t"
+	"sts %[wdtcsr], %[wde_15ms] \n\t"
+	:
+	: [wdtcsr] "i" (_SFR_MEM_ADDR(WDTCSR)),
+	  [wdce_wde] "r" ((uint8_t)((1<<WDCE) | (1<<WDE))),
+	  [wde_15ms] "r" ((uint8_t)((1<<WDE) | WDTO_15MS))
 );
 //	wdt_value = WDTCSR;
 //	printf("%d\n", wdt_value);
 
 
-    // Step 4: Wait for reset
-    while (1);
+	// Step 4: Wait for reset
+	while (1);
 }
 
 ISR(PCINT0_vect)
@@ -325,14 +325,14 @@ ISR(PCINT0_vect)
 
 void can_SendErrorMsg(const uint8_t *data)
 {
-    if (tx_count >= CAN_TX_QUEUE_SIZE) return;  // queue full → drop or handle
+	if (tx_count >= CAN_TX_QUEUE_SIZE) return;  // queue full → drop or handle
 
-    uint8_t next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
-    memcpy(&err_tx_queue[tx_head], data, 8);
+	uint8_t next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
+	memcpy(&err_tx_queue[tx_head], data, 8);
 
-    tx_head = next;
-    __asm__("sei");            // atomic increment
-    tx_count++;
+	tx_head = next;
+	__asm__("sei");            // atomic increment
+	tx_count++;
 }
 
 /* Call this from main loop as fast as possible */
@@ -345,18 +345,18 @@ void can_process(void)
 	msg.flags.extended 	= 0;
 	msg.flags.rtr 		= 0;
 
-    if (tx_count == 0) return;
+	if (tx_count == 0) return;
 
-    /* If hardware TX buffer/mailbox is free → send next frame */
-    if (true) /* your CAN controller TX ready flag */
+	/* If hardware TX buffer/mailbox is free → send next frame */
+	if (true) /* your CAN controller TX ready flag */
 	{
 		uint8_t *f = &err_tx_queue[tx_tail];
 
 		for (uint8_t i = 0; i < 8; i++) msg.data.byte[i] = f[i];
-        
+		
 		can_send_message((can_t*)(&msg));
-        
-        tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
-        tx_count--;
-    }
+		
+		tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
+		tx_count--;
+	}
 }

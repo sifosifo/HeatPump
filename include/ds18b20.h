@@ -34,30 +34,30 @@
 /* identifiers for the I/O ports */
 typedef enum
 {
-    DS_PORT_A = 0,
-    DS_PORT_B = 1,
-    DS_PORT_C = 2,
-    DS_PORT_D = 3
+	DS_PORT_A = 0,
+	DS_PORT_B = 1,
+	DS_PORT_C = 2,
+	DS_PORT_D = 3
 } ds_port_t;
 
 
 typedef struct ds18b20
 {
-    int8_t    present;
+	int8_t    present;
 
-    ds_port_t port;
-    uint8_t   pin;
-    uint8_t   phigh;
-    uint8_t   plow;
+	ds_port_t port;
+	uint8_t   pin;
+	uint8_t   phigh;
+	uint8_t   plow;
 
-    int8_t    tempint;
-    int8_t    tempfrac;
-    int8_t    temphigh;
-    int8_t    templow;
-    int8_t    configvalid;
-    uint8_t   resolution;
+	int8_t    tempint;
+	int8_t    tempfrac;
+	int8_t    temphigh;
+	int8_t    templow;
+	int8_t    configvalid;
+	uint8_t   resolution;
 
-    uint8_t   scratchpad[SCRATCHPAD_SIZE];
+	uint8_t   scratchpad[SCRATCHPAD_SIZE];
 } ds18b20_t;
 
 

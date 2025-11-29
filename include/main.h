@@ -11,15 +11,15 @@ static const char * const state_names[] PROGMEM =
 	"POST",
 	"BOOT",
 	"BOOT_ERROR",
-    "OFF_COOLDOWN",
-    "OFF_LOCKED",
-    "OFF",
-    "ON_FLOW_CHECKING",
-    "ON_LOCKED",
-    "ON",
+	"OFF_COOLDOWN",
+	"OFF_LOCKED",
+	"OFF",
+	"ON_FLOW_CHECKING",
+	"ON_LOCKED",
+	"ON",
 	"MACHINE_OK",
-    "RECOVERABLE_ERROR",
-    "FATAL_ERROR"
+	"RECOVERABLE_ERROR",
+	"FATAL_ERROR"
 };
 
 extern uint8_t POST_status;

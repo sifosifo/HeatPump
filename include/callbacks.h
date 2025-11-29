@@ -20,7 +20,7 @@ typedef enum
 
 typedef enum
 {
-    INIT_ERROR,
+	INIT_ERROR,
 	TOO_HIGH,
 	TOO_LOW,
 	NOT_CONNECTED,

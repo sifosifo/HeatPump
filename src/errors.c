@@ -38,13 +38,13 @@ void error_SetError(uint8_t ModuleID, uint8_t error_code)
 
 void error_Halt(void)
 {       // Something must went wrong
-        printf("Going off\n");
-        while(1)
-        {
-                cli();
-                DDRB = 0;
-                DDRC = 0;
-                DDRD = 0;
-        }
+	printf("Going off\n");
+	while(1)
+	{
+		cli();
+		DDRB = 0;
+		DDRC = 0;
+		DDRD = 0;
+	}
 }
 

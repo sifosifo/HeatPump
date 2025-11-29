@@ -28,16 +28,16 @@ volatile uint8_t Process_1s = 0;	// flag indicating when to process 1s tasks
 static void on_error_detected(uint8_t error_code, uint8_t type)
 {
 	uint32_t now = timer_GetTimestamp_s();
-    uint8_t payload[8];
+	uint8_t payload[8];
 
-    payload[0] = ((error_code & 0x0F) << 4) | (type & 0x0F);
-    payload[1] = CurrentState;									// Current state machine state
-    payload[2] = ((now - StateEntryTime) >> 8) & 0xFF;
-    payload[3] = (now - StateEntryTime) & 0xFF;
-    payload[4] = (uint8_t)(now >> 24);
-    payload[5] = (uint8_t)(now >> 16);
-    payload[6] = (uint8_t)(now >> 8);
-    payload[7] = (uint8_t)(now >> 0);
+	payload[0] = ((error_code & 0x0F) << 4) | (type & 0x0F);
+	payload[1] = CurrentState;									// Current state machine state
+	payload[2] = ((now - StateEntryTime) >> 8) & 0xFF;
+	payload[3] = (now - StateEntryTime) & 0xFF;
+	payload[4] = (uint8_t)(now >> 24);
+	payload[5] = (uint8_t)(now >> 16);
+	payload[6] = (uint8_t)(now >> 8);
+	payload[7] = (uint8_t)(now >> 0);
 
 	can_SendErrorMsg(payload);
 }
@@ -51,8 +51,8 @@ static void on_event(uint8_t event_type, uint8_t current_state)
 
 static inline const char *GetStateName(uint8_t s)
 {
-    if (s > FATAL_ERROR) return "UNKNOWN";
-    return (const char *)pgm_read_word(&state_names[s]);
+	if (s > FATAL_ERROR) return "UNKNOWN";
+	return (const char *)pgm_read_word(&state_names[s]);
 }
 
 // Dedicated function for state changes with debug printf
@@ -67,7 +67,7 @@ void ChangeState(uint8_t newState)
 		(unsigned long)spent,
 		(unsigned long)now);
 
-    CurrentState = newState;
+	CurrentState = newState;
 	StateEntryTime = now;
 }
 
