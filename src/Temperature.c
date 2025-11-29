@@ -1,11 +1,7 @@
-/* --------------------------------------------------------------
-   Temperature.c – 1 Hz using public ds18b20_read_temperature()
-   -------------------------------------------------------------- */
-#include "Temperature.h"
 #include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
-#include "HeatPump.h"
+#include "Temperature.h"
 #include "errors.h"
 #include "callbacks.h"
 
@@ -74,18 +70,22 @@ uint8_t temp_GetHysteresisTemperature(void)
 /* ------------------------------------------------------------------
    Init
    ------------------------------------------------------------------ */
-void Init_Temperature(void)
+void Init_Temperature(uint8_t error_sensor_id)
 {
-    for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
-        Tsensors[i].ds.port = DS_PORT_C;
-        Tsensors[i].ds.pin  = Tsensors[i].pin;
+    if(error_sensor_id >= TEMPERATURE_SENSOR_COUNT)
+    {
+        notify_error(TEMPERATURE_SENSOR_COUNT, OTHER);
+    }else
+    {    
+        Tsensors[error_sensor_id].ds.port = DS_PORT_C;
+        Tsensors[error_sensor_id].ds.pin  = Tsensors[error_sensor_id].pin;
 
-        uint8_t rc = ds18b20_init(&Tsensors[i].ds);
-        Tsensors[i].state = (rc == 1) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
-        Tsensors[i].error_counter = (rc == 1) ? 0 : 1;
-        Tsensors[i].temperature = 0;
+        uint8_t rc = ds18b20_init(&Tsensors[error_sensor_id].ds);
+        Tsensors[error_sensor_id].state = (rc == 1) ? TEMPERATURE_SENSOR_OK : TEMPERATURE_SENSOR_NOT_CONNECTED;
+        Tsensors[error_sensor_id].error_counter = (rc == 1) ? 0 : 1;
+        //Tsensors[i].temperature = 0;
 
-        if(Tsensors[i].state != TEMPERATURE_SENSOR_OK) notify_error(i, INIT_ERROR);
+        if(Tsensors[error_sensor_id].state != TEMPERATURE_SENSOR_OK) notify_error(error_sensor_id, INIT_ERROR);
     }
 }
 
@@ -94,7 +94,7 @@ void Init_Temperature(void)
    ------------------------------------------------------------------ */
 uint8_t MeasureTemperature(void)
 {
-    uint8_t total_errors = 0;
+    uint8_t error_sensor_id = TEMPERATURE_SENSOR_COUNT; // means no sensor has error reading
 
 //    printf("T:");
 
@@ -102,30 +102,39 @@ uint8_t MeasureTemperature(void)
         if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) {
 //            printf(" NC");
             notify_error(i, NOT_CONNECTED);
-            ++total_errors;
+            error_sensor_id = i;
             continue;
         }
 
         int16_t temp = ds18b20_read_temperature(&Tsensors[i].ds);
 
-        if (temp == ENOTPRESENT) {
-            Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;   // Do not update value, just flag sensor as absent
-            notify_error(i, NOT_CONNECTED);
-            ++total_errors;
+        // Filter out jumps to 0. It is likely bad reading - ignore it and report
+/*        if((temp == 0) && (((Tsensors[i].temperature - temp) > 8) || ((Tsensors[i].temperature - temp) < 8)))
+        {
+            notify_error(i, ZERO);
+            error_sensor_id++;
+            continue;
+        }
+*/
+        if (temp == ENOTPRESENT || temp == DS18B20_ERROR_CRC || temp == DS18B20_ERROR_OOR)
+        {
+            Tsensors[i].state = TEMPERATURE_SENSOR_NOT_CONNECTED;   // TODO: Other states not considered
             if (Tsensors[i].error_counter < 255) ++Tsensors[i].error_counter;
-        } else {
+
+            if(temp == ENOTPRESENT) notify_error(i, NOT_CONNECTED);
+            if(temp == DS18B20_ERROR_OOR) notify_error(i, OUT_OF_RANGE);
+            if(temp == DS18B20_ERROR_CRC) notify_error(i, WRONG_CRC);
+            error_sensor_id = i;
+        }else
+        {
             Tsensors[i].temperature = temp;
             Tsensors[i].error_counter = 0;
-//            printf(" %dC", temp / 16);
         }
     }
 //    printf("\n");
-    return total_errors;
+    return error_sensor_id;
 }
 
-/* ------------------------------------------------------------------
-   Rest of your functions (copy from before)
-   ------------------------------------------------------------------ */
 void CheckTemperatureRanges(void)
 {
     for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i)
@@ -147,10 +156,10 @@ void CheckTemperatureRanges(void)
 
 int16_t GetTemperature(uint8_t index)
 {
-    if (Tsensors[index].state != TEMPERATURE_SENSOR_OK) return 0x8000;
     return Tsensors[index].temperature;
 }
 
+/*
 uint8_t GetTankTemperatureState(void)
 {
     int16_t t = GetTemperature(TANK_TOP);
@@ -165,5 +174,28 @@ uint8_t GetTankTemperatureState(void)
         return TEMPERATURE_ABOVE_THRESHOLD;
     }
 //    printf("Temperature in range\n");
+    return TEMPERATURE_IN_RANGE;
+}*/
+
+uint8_t GetTankTemperatureState(void)
+{
+    _Bool start  = GetTemperature(TANK_BOTTOM) <= TargetTankTemperatureLow;
+
+    float dT_water = GetTemperature(SECONDARY_SIDE_OUTLET) - GetTemperature(SECONDARY_SIDE_INLET);   // secondary side ΔT
+//    float power_now = flow_tank_side * dT_water * 1.163;   // approx. kW
+
+    // Remember maximum power that occurred in the first 30–60 min of this run
+//    if (heat_pump_running && power_now > peak_power_this_run) {
+//        peak_power_this_run = power_now;
+//    }
+
+    // Stop when current power has dropped to ≤ 30–35 % of the peak power this run
+ //   bool stop = (power_now <= peak_power_this_run * 0.33) ||
+ //               (T_bottom_buffer >= TargetTankTemperature + 2.0);   // safety ceiling
+ 
+    _Bool stop = (GetTemperature(TANK_BOTTOM) >= TargetTankTemperatureHigh);   // safety ceiling
+
+    if(start) return TEMPERATURE_BELOW_THRESHOLD;
+    if(stop) return TEMPERATURE_ABOVE_THRESHOLD;
     return TEMPERATURE_IN_RANGE;
 }

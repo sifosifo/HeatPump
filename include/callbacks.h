@@ -24,6 +24,9 @@ typedef enum
 	TOO_HIGH,
 	TOO_LOW,
 	NOT_CONNECTED,
+	OUT_OF_RANGE,
+	WRONG_CRC,
+	ZERO,
 	OTHER,
 	ERR_TYPE_COUNT
 } err_type_t;

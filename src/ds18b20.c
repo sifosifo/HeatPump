@@ -11,6 +11,7 @@
 */
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdbool.h>
 #include "ds18b20.h"
 
 #define FALSE 0
@@ -52,6 +53,22 @@
 /*
 ** nominally private routines
 */
+
+// Dallas/Maxim CRC8 for 1-Wire (polynomial 0x8C, reversed)
+static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
+{
+    uint8_t crc = 0;
+    for (uint8_t i = 0; i < len; ++i) {
+        uint8_t byte = data[i];
+        for (uint8_t j = 0; j < 8; ++j) {
+            uint8_t mix = (crc ^ byte) & 0x01;
+            crc >>= 1;
+            if (mix) crc ^= 0x8C;
+            byte >>= 1;
+        }
+    }
+    return crc;
+}
 
 uint8_t _reset(ds18b20_t *p)
 {
@@ -489,78 +506,65 @@ uint8_t ds18b20_init(ds18b20_t *p)
     return p->present;
 }
 
-
 int16_t ds18b20_read_temperature(ds18b20_t *p)
 {
     int n;
     uint8_t dq;
-    uint8_t resolution;
-    uint8_t fmask;
-    uint8_t fraction;
-    int8_t  tempint;
-    int16_t  temp16;
 
-    /* reset */
+    /* 1. Reset + presence check */
     p->present = _reset(p);
     if (!p->present)
         return ENOTPRESENT;
 
-    /* then send SKIP_ROM, CONVERT_T */
+    /* 2. Start conversion */
     _write_byte(p, SKIP_ROM);
     _write_byte(p, CONVERT_T);
 
-    /*  wait for temperature conversion to complete - max Tconv usec */
+    /* 3. Wait for conversion (750ms max for 12-bit) */
     dq = 0;
-    for (n = 0; n < 8 && dq == 0; n++)
-    {
+    for (n = 0; n < 8 && dq == 0; n++) {
         _delay_us(Tconv / 8);
         dq = _read_dq(p);
     }
 
-    /* now send reset, SKIP_ROM, READ_SCRATCHPAD */
-    _reset(p);
+    /* 4. Reset again */
+    if (!_reset(p))
+        return ENOTPRESENT;  // Device disappeared mid-read → critical error
+
+    /* 5. Read scratchpad */
     _write_byte(p, SKIP_ROM);
     _write_byte(p, READ_SCRATCHPAD);
 
-    /* and read the result */
     for (n = 0; n < SCRATCHPAD_SIZE; n++)
         p->scratchpad[n] = _read_byte(p);
 
-    /*
-    ** if the resolution is less than 1/16, there may be high res bits
-    ** left over from previous readings so we should filter them out
-    */
-    resolution = p->scratchpad[CONFIG];
-    switch(resolution)
-    {
-        case DS_RES_2:
-            fmask = 0x08;
-            break;
-
-        case DS_RES_4:
-            fmask = 0x0c;
-            break;
-
-        case DS_RES_8:
-            fmask = 0x0e;
-            break;
-
-        /* if resolution not well defined assume 1/16 */
-        case DS_RES_16:
-        default:
-            fmask = 0x0f;
-            break;
+    /* 6. CRITICAL: Validate CRC!!! */
+    if (ds18b20_crc8(p->scratchpad, 8) != p->scratchpad[8]) {
+        // Corrupted data — DO NOT TRUST
+        return DS18B20_ERROR_CRC;  // Define this! e.g. -1000
     }
-    fraction = p->scratchpad[TEMPLSB] & fmask;
 
-    /*
-    ** the integer portion of temperature fits into one byte but is
-    ** stored as 4 bits in LSB and 4 bits in MSB.
-    ** remove the fraction bits by shifting right 4 bits and then
-    ** insert the 4 bits from MSB into the tempint variable
-    */
-    tempint = p->scratchpad[TEMPLSB] >> 4;
-    tempint |= (p->scratchpad[TEMPMSB] << 4);
+    /* Now we can trust the data */
+
+    uint8_t resolution = p->scratchpad[CONFIG];
+    uint8_t fmask = 0x0F;
+    switch(resolution) {
+        case DS_RES_2: fmask = 0x08; break;
+        case DS_RES_4: fmask = 0x0C; break;
+        case DS_RES_8: fmask = 0x0E; break;
+        // DS_RES_16: fmask = 0x0F (default)
+    }
+
+    uint8_t fraction = p->scratchpad[TEMPLSB] & fmask;
+    int8_t tempint = (p->scratchpad[TEMPLSB] >> 4) | (p->scratchpad[TEMPMSB] << 4);
+
+    /* Out-of-range detection */
+    if (tempint < -880 || tempint > 2000 || 
+        tempint == 0x0550 ||      // 85°C power-on default
+        tempint == -2048)         // erased scratchpad / glitch
+    {
+        return DS18B20_ERROR_OOR;
+    }
 
     p->tempint = tempint;
     p->tempfrac = fraction;
@@ -569,7 +573,6 @@ int16_t ds18b20_read_temperature(ds18b20_t *p)
     p->resolution = resolution;
     p->configvalid = TRUE;
 
-    /* return the temperature expressed as multiples of 1/16th degree C */
-    temp16 = tempint * 16 + fraction;
+    int16_t temp16 = (int16_t)tempint * 16 + fraction;
     return temp16;
 }

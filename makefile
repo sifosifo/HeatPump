@@ -1,11 +1,3 @@
-# === SILENT BUILD ===
-ifeq ($(V),1)
-    Q =
-else
-   Q = @
-   $(info === Building in silent mode. Use `make V=1` for verbose ===)
-endif
-
 # === CONFIGURATION ===
 MCU = atmega328p
 F_CPU = 16000000UL
@@ -27,25 +19,25 @@ AVRDUDE = avrdude
 all: $(BUILD_DIR)/$(TARGET).hex
 
 $(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
-	$(Q)avr-objcopy -O ihex -R .eeprom $< $@
+	avr-objcopy -O ihex -R .eeprom $< $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJ) lib/libcan.a | $(BUILD_DIR)
-	$(Q)$(CC) $(LDFLAGS) -o $@ $(OBJ) lib/libcan.a
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) lib/libcan.a
 
 $(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
-	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR):
-	$(Q)mkdir -p $@
+	mkdir -p $@
 
 flash: $(BUILD_DIR)/$(TARGET).hex
-	$(Q)$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyUSB0 -b 57600 -U flash:w:$<
+	$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyUSB0 -b 57600 -U flash:w:$<
 
 clean:
-	$(Q)rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 size: $(BUILD_DIR)/$(TARGET).elf
-	$(Q)avr-size --format=avr --mcu=$(MCU) $<
+	avr-size --format=avr --mcu=$(MCU) $<
 
 # Include dependency files
 -include $(DEP)

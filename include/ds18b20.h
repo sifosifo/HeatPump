@@ -26,9 +26,10 @@
 
 /* error codes */
 #define EBADR		53	/* invalid port or pin */
-#define ENOTPRESENT	10404	/* DS18B20 device is not connected */
-				/* this value needs to be outside the range 16*[-55:125] */
-
+#define ENOTPRESENT       -1
+#define DS18B20_ERROR_CRC -1000   // Very important distinct value
+#define DS18B20_ERROR_COMM -1001  // Optional: for read/write failures
+#define DS18B20_ERROR_OOR   -1002   // Out of range
 
 /* identifiers for the I/O ports */
 typedef enum

@@ -9,7 +9,7 @@
 #include "Temperature.h"
 #include "WaterFlow.h"
 #include "Relays.h"
-#include "HeatPump.h"
+#include "main.h"
 #include "uart.h"
 #include "errors.h"
 
@@ -311,6 +311,7 @@ ISR(PCINT0_vect)
 			printf("Requesting reset\n");
 			error_Halt();
 			force_reset();
+			while(1) {}
 		}
 		msg.length = 2;
 		msg.data.byte[0] = temp_GetTargetTemperature();

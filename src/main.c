@@ -13,7 +13,7 @@
 #include "ComInterface.h"
 #include "Timer.h"
 #include "uart.h"
-#include "HeatPump.h"
+#include "main.h"
 #include "errors.h"
 #include "callbacks.h"
 
@@ -40,6 +40,11 @@ static void on_error_detected(uint8_t error_code, uint8_t type)
     payload[7] = (uint8_t)(now >> 0);
 
 	can_SendErrorMsg(payload);
+}
+
+static void on_event(uint8_t event_type, uint8_t current_state)
+{
+	
 }
 
 // State machine bussiness
@@ -81,12 +86,14 @@ void ProcessStateMachine_s(void)
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
 				ChangeState(OFF_LOCKED);
+				ClearEventTimer_s();
 			}
 			break;
 		case OFF_LOCKED:	// No checking for temperature, needs to stay OFF for defined period of time
 			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_OFF)
 			{
 				ChangeState(OFF_);
+				ClearEventTimer_s();
 			}
 			break;
 		case OFF_:			// Check temperature and change state if needed
@@ -141,6 +148,7 @@ void ProcessStateMachine_s(void)
 			if(EventTimer_s>CYCLING_PROTECTION_PERIOD_ON)
 			{
 				ChangeState(ON_);
+				ClearEventTimer_s();
 			}
 			if(flow_WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
@@ -148,6 +156,7 @@ void ProcessStateMachine_s(void)
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
 				ChangeState(OFF_LOCKED);
+				ClearEventTimer_s();
 			}
 			break;
 		case ON_:			// Check temperature and change state if needed
@@ -165,21 +174,25 @@ void ProcessStateMachine_s(void)
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
 				ChangeState(OFF_LOCKED);
+				ClearEventTimer_s();
 			}
 			break;
 		case RECOVERABLE_ERROR:			
 			if(EventTimer_s>RECOVERABLE_ERROR_PERIOD_ON) ChangeState(OFF_LOCKED);
 			SetRelayState(COMPRESSOR, 1);
 			SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-			SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);			
+			SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+			ClearEventTimer_s();	
 			break;
 		case FATAL_ERROR:
 			printf("Fatal error Thermostat.\n");
 			error_Halt();
+			notify_error(7, 0);
 			break;
 		default:
 			printf("Non-existent state %d.\n", CurrentState);
 			error_Halt();
+			notify_error(7, 1);
 			break;
 	}
 }
@@ -193,12 +206,12 @@ void Task_1000ms(void)
 
 int main(void)
 {
-	uint8_t errors = 0;	
+	uint8_t sensor_id = 0;	
 
 	wdt_disable();
 	timer_Init(&Task_1000ms);
 	printf("Init_Timer\n");
-	Init_Temperature();
+	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) Init_Temperature(i);
 	printf("Init_Temperature\n");
 	flow_Init();
 	printf("Init_WaterFlow\n");
@@ -216,18 +229,18 @@ int main(void)
 		#ifndef DEBUG
 		CheckIfCANIsActive();	
 		#endif
-		flow_Process();	// Calculate flow from pulses
 		if(Process_1s)
 		{
-			errors = MeasureTemperature();
-			if(errors==0)
+			flow_Process();	// Calculate flow from pulses
+			sensor_id = MeasureTemperature();	// Delays everything by 1s !
+			if(sensor_id==TEMPERATURE_SENSOR_COUNT)	// TEMPERATURE_SENSOR_COUNT means no sensor had issue with reading
 			{
 				CheckTemperatureRanges();
 				ProcessStateMachine_s();
 			}else
 			{
 				printf("Init_Temperature\n");
-				Init_Temperature();		// try to recover temperature sensors
+				Init_Temperature(sensor_id);		// try to recover temperature sensor
 			}
 			Process_1s = 0;	// Reset flag
 		}

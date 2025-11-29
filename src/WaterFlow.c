@@ -47,7 +47,7 @@ void flow_StorePulses_s(void)		// Do minimum in interrupt - just store
 	}
 }
 
-#define FLOW_NUMERATOR_USED 120	// Timig seems to be off, to compensate, added magix constant
+#define FLOW_NUMERATOR_USED 50	// Timig seems to be off, to compensate, added magix constant
 // --- WARNING CHECK ---
 #if (FLOW_NUMERATOR_USED != 50)
 #warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."
@@ -64,8 +64,9 @@ void flow_Process(void)
 {
 	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
-		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);		
+		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
 	}
+	//printf("PFR:\t%d, SFR:\t%d\n", Pulses_[0], Pulses_[1]);
 }
 
 uint8_t flow_WaterFlowNominal(void)
@@ -79,9 +80,6 @@ uint8_t flow_WaterFlowNominal(void)
 	if((PrimaryFlow_dcl>PRIMARY_MIN_FLOW)&&(SecondaryFlow_dcl>SECONDARY_MIN_FLOW))
 	{
 		nominal = 1;
-	}else
-	{
-	printf("PF, SF, nominal %d, %d, %d\n", PrimaryFlow_dcl, SecondaryFlow_dcl, nominal);
 	}
 	
 	return(nominal);

@@ -18,7 +18,7 @@ typedef enum { TEMPERATURE_BELOW_THRESHOLD,
                TEMPERATURE_ABOVE_THRESHOLD,
                TEMPERATURE_STATE_COUNT } temp_state;
 
-void    Init_Temperature(void);
+void Init_Temperature(uint8_t error_sensor_id);
 uint8_t MeasureTemperature(void);
 void    CheckTemperatureRanges(void);
 int16_t GetTemperature(uint8_t index);
