@@ -241,9 +241,8 @@ int main(void)
 	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
 	while (1)	// Idle loop
 	{		
-		#ifndef DEBUG
-		CheckIfCANIsActive();	
-		#endif
+		can_CheckIfCANIsActive();	
+		
 		if(Process_1s)
 		{
 			flow_Process();	// Calculate flow from pulses
@@ -259,7 +258,8 @@ int main(void)
 			}
 			Process_1s = 0;	// Reset flag
 		}
-		can_process();	// Send messages from queue	
+		can_process();	// Send error messages from queue
+		can_rx_process();	// Process received messages and send responses if needed
 	}	
 	return 0;
 }

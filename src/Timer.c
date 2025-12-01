@@ -25,7 +25,6 @@ ISR(TIMER1_OVF_vect)
 	Timestamp_s++;
 	TCNT1 = 65535 - 62500;	// 1s
 	//TCNT1 = 65535 - 6250;	// 100ms
-//	SendBootupMessage(0xAA);
 	(*Task_1)();
 	EventTimer_s++;
 }
@@ -53,17 +52,5 @@ void ClearEventTimer_s(void)
 ISR(__vector_default)
 {
 	TCNT1 = 65535 - 62500;	
-	SendBootupMessage(0xBB);
 	printf("vector_default");
-//	(*Task_1)();
-/*
-	can_t msg;
-	
-	msg.id = 0x1;
-	msg.flags.rtr = 0;
-	msg.flags.extended = 0;	
-	msg.length = 1;
-
-	can_send_message(&msg);
-	*/
 }
