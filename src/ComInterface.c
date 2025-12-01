@@ -36,7 +36,7 @@ typedef struct
 
 } can_custom_t;
 
-static uint8_t err_tx_queue[CAN_TX_QUEUE_SIZE];
+static uint8_t err_tx_queue[CAN_TX_QUEUE_SIZE][8];
 static volatile uint8_t tx_head = 0;
 static volatile uint8_t tx_tail = 0;
 static volatile uint8_t tx_count = 0;
@@ -222,29 +222,16 @@ void CheckIfCANIsActive(void)
 
 void force_reset()
 {
-//	printf("Reset requested");
+	printf("Reset requested");
+    cli();              // Disable interrupts (important so nothing delays the WDT)
+//    wdt_enable(WDTO_15MS);  // Enable watchdog with shortest timeout (15 ms)
+//	while (1);
+//asm volatile ("jmp 0");
 
-//	uint8_t wdt_value = WDTCSR;
-//	printf("%d\n", wdt_value);
-
-cli();
-MCUSR = 0;
-
-// Step 1: enable timed sequence
-__asm__ __volatile__ (
-	"sts %[wdtcsr], %[wdce_wde] \n\t"
-	"sts %[wdtcsr], %[wde_15ms] \n\t"
-	:
-	: [wdtcsr] "i" (_SFR_MEM_ADDR(WDTCSR)),
-	  [wdce_wde] "r" ((uint8_t)((1<<WDCE) | (1<<WDE))),
-	  [wde_15ms] "r" ((uint8_t)((1<<WDE) | WDTO_15MS))
-);
-//	wdt_value = WDTCSR;
-//	printf("%d\n", wdt_value);
-
-
-	// Step 4: Wait for reset
-	while (1);
+    MCUSR = 0;                      // IMPORTANT: clear reset flags
+    wdt_disable();                  // Disable WDT completely
+    wdt_enable(WDTO_15MS);          // Re-enable with shortest timeout
+    while (1);  
 }
 
 ISR(PCINT0_vect)
@@ -325,14 +312,19 @@ ISR(PCINT0_vect)
 
 void can_SendErrorMsg(const uint8_t *data)
 {
-	if (tx_count >= CAN_TX_QUEUE_SIZE) return;  // queue full → drop or handle
+	uint8_t next;
 
-	uint8_t next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
-	memcpy(&err_tx_queue[tx_head], data, 8);
+	// if queue full -> drop
+	if (tx_count >= CAN_TX_QUEUE_SIZE) return;
 
+	// copy into current head slot (atomicize modifications)
+	cli();   // disable interrupts while we modify shared indices/counter
+	memcpy(err_tx_queue[tx_head], data, 8);
+
+	next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
 	tx_head = next;
-	__asm__("sei");            // atomic increment
 	tx_count++;
+	sei();   // re-enable interrupts
 }
 
 /* Call this from main loop as fast as possible */
@@ -350,13 +342,15 @@ void can_process(void)
 	/* If hardware TX buffer/mailbox is free → send next frame */
 	if (true) /* your CAN controller TX ready flag */
 	{
-		uint8_t *f = &err_tx_queue[tx_tail];
-
+		cli(); // protect tx_tail / tx_count
+		uint8_t *f = err_tx_queue[tx_tail];
+		// copy the slot into message payload
 		for (uint8_t i = 0; i < 8; i++) msg.data.byte[i] = f[i];
-		
-		can_send_message((can_t*)(&msg));
-		
+
 		tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
 		tx_count--;
+		sei();
+		
+		can_send_message((can_t*)(&msg));
 	}
 }

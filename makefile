@@ -23,6 +23,7 @@ $(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJ) lib/libcan.a | $(BUILD_DIR)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) lib/libcan.a
+	avr-size -C --mcu=$(MCU) $(BUILD_DIR)/$(TARGET).elf
 
 $(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -97,6 +97,9 @@ void ProcessStateMachine_s(void)
 			}
 			break;
 		case OFF_:			// Check temperature and change state if needed
+			PrimaryFlow_dcl = flow_GetFlow_dclmin(PRIMARY_SIDE);
+			SecondaryFlow_dcl = flow_GetFlow_dclmin(SECONDARY_SIDE);
+
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
 				printf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
@@ -120,6 +123,7 @@ void ProcessStateMachine_s(void)
 		case ON_FLOW_CHECKING:			
 			PrimaryFlow_dcl = flow_GetFlow_dclmin(PRIMARY_SIDE);
 			SecondaryFlow_dcl = flow_GetFlow_dclmin(SECONDARY_SIDE);
+			
 			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
 			{
 				printf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
@@ -178,11 +182,16 @@ void ProcessStateMachine_s(void)
 			}
 			break;
 		case RECOVERABLE_ERROR:			
-			if(EventTimer_s>RECOVERABLE_ERROR_PERIOD_ON) ChangeState(OFF_LOCKED);
-			SetRelayState(COMPRESSOR, 1);
-			SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-			SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
-			ClearEventTimer_s();	
+			if(EventTimer_s > RECOVERABLE_ERROR_PERIOD_ON)
+			{
+				ChangeState(OFF_LOCKED);
+				ClearEventTimer_s();
+			}else
+			{
+				SetRelayState(COMPRESSOR, 1);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+			}
 			break;
 		case FATAL_ERROR:
 			printf("Fatal error Thermostat.\n");
@@ -211,14 +220,20 @@ int main(void)
 	wdt_disable();
 	timer_Init(&Task_1000ms);
 	printf("Init_Timer\n");
+	
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) Init_Temperature(i);
+	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup
 	printf("Init_Temperature\n");
+
 	flow_Init();
 	printf("Init_WaterFlow\n");
+	
 	Init_Relays();
 	printf("Init_Relays\n");
+	
 	sei();
 	uart_init();
+	
 	printf("--------------Booting----------------\n");
 	register_error_callback(on_error_detected);		// Register callbacks
 	//RunPOST();

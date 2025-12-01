@@ -1,7 +1,6 @@
 #include "Relays.h"
 #include "uart.h"
 
-
 struct relay Relays[RELAY_COUNT] = {
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 5, OFF, 0,
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 6, OFF, 0,
