@@ -176,15 +176,15 @@ void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
 uint8_t Init_ComInterface(void)
 {
 	uint8_t result = 0;
-//	printf("CAN\n");	
+//	//megaprintf("CAN\n");	
 	result = can_init(BITRATE_250_KBPS);	// Initialize MCP2515
 	
 	if(result == 0)
 	{	// Error - not possible to initialise		
-//		printf("FAIL\n");
+//		//megaprintf("FAIL\n");
 	}else
 	{
-//		printf("OK\n");	
+//		//megaprintf("OK\n");	
 		// Enable interrupt on pin change on PORTB
 		PCICR |= (1<<PCIE0);
 		//= PCIFR & (1<<PCIF1);	
@@ -207,9 +207,9 @@ void CheckIfCANIsActive(void)
 		
 	if(CANactive==0)
 	{
-		printf("Init CAN\n");
+		//megaprintf("Init CAN\n");
 		err = Init_ComInterface();
-		printf("Init status: %d\n", err);
+		//megaprintf("Init status: %d\n", err);
 		if(err==0)
 		{	
 			CANactive = 0;
@@ -222,14 +222,8 @@ void CheckIfCANIsActive(void)
 
 void force_reset()
 {
-	printf("Reset requested");
+	//megaprintf("Reset requested");
     cli();              // Disable interrupts (important so nothing delays the WDT)
-//    wdt_enable(WDTO_15MS);  // Enable watchdog with shortest timeout (15 ms)
-//	while (1);
-//asm volatile ("jmp 0");
-
-    MCUSR = 0;                      // IMPORTANT: clear reset flags
-    wdt_disable();                  // Disable WDT completely
     wdt_enable(WDTO_15MS);          // Re-enable with shortest timeout
     while (1);  
 }
@@ -284,18 +278,18 @@ ISR(PCINT0_vect)
 		tmp8 = msg.data.byte[TARGET_TEMP];
 		if(tmp8!=NO_CHANGE_REQUESTED)
 		{
-			printf("Set TT: %d\n", tmp8);
+			//megaprintf("Set TT: %d\n", tmp8);
 			temp_SetTargetTemperature(tmp8);
 		}
 		tmp8 = msg.data.byte[HYSTERESIS_TEMP];
 		if(tmp8!=NO_CHANGE_REQUESTED)
 		{
-			printf("Set TH: %d\n", tmp8);
+			//megaprintf("Set TH: %d\n", tmp8);
 			temp_SetHysteresisTemperature(tmp8);
 		}
 		if(msg.data.byte[RESET]==0xA5)
 		{
-			printf("Requesting reset\n");
+			//megaprintf("Requesting reset\n");
 			error_Halt();
 			force_reset();
 			while(1) {}

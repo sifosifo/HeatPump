@@ -1,5 +1,6 @@
 // coding: utf-8
 
+#include <avr/io.h>		//led_on
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>	// for WTD reset
@@ -55,17 +56,13 @@ static inline const char *GetStateName(uint8_t s)
 	return (const char *)pgm_read_word(&state_names[s]);
 }
 
-// Dedicated function for state changes with debug printf
+// Dedicated function for state changes with debug //megaprintf
 void ChangeState(uint8_t newState)
 {
 	uint32_t now = timer_GetTimestamp_s();
 	uint32_t spent    = now - StateEntryTime;
 
-	printf("STATE CHANGE: %s -> %s | spent %lu s | uptime %lu s\n",
-		GetStateName(CurrentState),
-		GetStateName(newState),
-		(unsigned long)spent,
-		(unsigned long)now);
+	//megaprintf("STATE CHANGE: %s -> %s | spent %lu s | uptime %lu s\n", GetStateName(CurrentState), GetStateName(newState), (unsigned long)spent, (unsigned long)now);
 
 	CurrentState = newState;
 	StateEntryTime = now;
@@ -78,6 +75,7 @@ void ProcessStateMachine_s(void)
 	uint8_t SecondaryFlow_dcl;
 
 	EventTimer_s = GetEventTimer_s();
+	wdt_reset();
 	switch(CurrentState)
 	{
 		case OFF_COOLDOWN:	// Let circulating pumps run for some time after compresor was turned off
@@ -102,7 +100,7 @@ void ProcessStateMachine_s(void)
 
 			if(GetTankTemperatureState()==TEMPERATURE_BELOW_THRESHOLD)
 			{				
-				printf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
+				//megaprintf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
 				ChangeState(ON_FLOW_CHECKING);			
 				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
 				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
@@ -111,10 +109,10 @@ void ProcessStateMachine_s(void)
 			if(flow_WaterFlowNominal())	// Block heatpump in case of nominal flow detected
 			{	// Circulating pump relay is stuck or error while reading flow sensor
 				// Might cause reading nominal flow when no flow is present - critical error
-				printf("************Flow checking error:*************\n");
-				printf("Actual/Desired flow \n");
-				printf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
-				printf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
+				//megaprintf("************Flow checking error:*************\n");
+				//megaprintf("Actual/Desired flow \n");
+				//megaprintf("Primary:\t%d/0l /min\n", PrimaryFlow_dcl/10);
+				//megaprintf("Secondary:\t%d/0 l/min\n", SecondaryFlow_dcl/10);
 				//error_Halt();
 				ChangeState(RECOVERABLE_ERROR);
 				ClearEventTimer_s();
@@ -126,23 +124,23 @@ void ProcessStateMachine_s(void)
 			
 			if(EventTimer_s<FLOW_CHECKING_TIMEOUT_PERIOD)			
 			{
-				printf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
+				//megaprintf("Current flow: Primary: %d dcl/min Secondary: %d dcl/min\n", PrimaryFlow_dcl, SecondaryFlow_dcl);
 				if(flow_WaterFlowNominal())
 				{
-					printf("************Flow checking OK:*************\n");
-					printf("Actual/Desired flow after %ds\n", EventTimer_s);
-					printf("Primary:\t%d/%d l/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
-					printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+					//megaprintf("************Flow checking OK:*************\n");
+					//megaprintf("Actual/Desired flow after %ds\n", EventTimer_s);
+					//megaprintf("Primary:\t%d/%d l/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+					//megaprintf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 					SetRelayState(COMPRESSOR, 0);
 					ChangeState(ON_LOCKED);
 					ClearEventTimer_s();
 				}
 			}else
 			{
-				printf("************Flow checking error:*************\n");
-				printf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
-				printf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
-				printf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
+				//megaprintf("************Flow checking error:*************\n");
+				//megaprintf("Actual/Desired flow after %ds timeout\n", FLOW_CHECKING_TIMEOUT_PERIOD);
+				//megaprintf("Primary:\t%d/%dl /min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
+				//megaprintf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
 				//error_Halt();
 				ChangeState(RECOVERABLE_ERROR);
 				ClearEventTimer_s();
@@ -166,9 +164,9 @@ void ProcessStateMachine_s(void)
 		case ON_:			// Check temperature and change state if needed
 			if(GetTankTemperatureState()==TEMPERATURE_ABOVE_THRESHOLD)
 			{
-				printf("Heatpump OFF, was on for %d seconds\n", EventTimer_s);
+				//megaprintf("Heatpump OFF, was on for %d seconds\n", EventTimer_s);
 				ChangeState(OFF_COOLDOWN);
-				printf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
+				//megaprintf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
 				SetRelayState(COMPRESSOR, 1);				
 				ClearEventTimer_s();
 			}
@@ -194,12 +192,12 @@ void ProcessStateMachine_s(void)
 			}
 			break;
 		case FATAL_ERROR:
-			printf("Fatal error Thermostat.\n");
+			//megaprintf("Fatal error Thermostat.\n");
 			error_Halt();
 			notify_error(7, 0);
 			break;
 		default:
-			printf("Non-existent state %d.\n", CurrentState);
+			//megaprintf("Non-existent state %d.\n", CurrentState);
 			error_Halt();
 			notify_error(7, 1);
 			break;
@@ -211,34 +209,39 @@ void Task_1000ms(void)
 	flow_StorePulses_s();	// Just store impulses and process in ProcessFlow_s	
 	timer_Tick();		// Maintain uptime timestamp
 	Process_1s = 1;		// Trigger 1s tasks
+	PORTB ^= (1 << PB0);
 }
+
+
 
 int main(void)
 {
 	uint8_t sensor_id = 0;	
 
+	DDRB |= (1 << PB0); 
 	wdt_disable();
 	timer_Init(&Task_1000ms);
-	printf("Init_Timer\n");
+	//megaprintf("Init_Timer\n");	
 	
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) Init_Temperature(i);
 	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup
-	printf("Init_Temperature\n");
+	//megaprintf("Init_Temperature\n");
 
 	flow_Init();
-	printf("Init_WaterFlow\n");
+	//megaprintf("Init_WaterFlow\n");
 	
 	Init_Relays();
-	printf("Init_Relays\n");
+	//megaprintf("Init_Relays\n");
 	
 	sei();
 	uart_init();
 	
-	printf("--------------Booting----------------\n");
+	//megaprintf("--------------Booting----------------\n");
 	register_error_callback(on_error_detected);		// Register callbacks
 	//RunPOST();
 	temp_SetHysteresisTemperature(0);
 	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
+	wdt_enable(WDTO_8S);
 	while (1)	// Idle loop
 	{		
 		#ifndef DEBUG
@@ -254,7 +257,7 @@ int main(void)
 				ProcessStateMachine_s();
 			}else
 			{
-				printf("Init_Temperature\n");
+				//megaprintf("Init_Temperature\n");
 				Init_Temperature(sensor_id);		// try to recover temperature sensor
 			}
 			Process_1s = 0;	// Reset flag

@@ -43,7 +43,7 @@ void recalculateThresholds(void)
 {
 	TargetTankTemperatureHigh = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
 	TargetTankTemperatureLow = TargetTankTemperature - TargetTankTemperatureHysteresis/2;
-	printf("TT TL TH: %d, %d, %d\n", TargetTankTemperature/16, TargetTankTemperatureLow/16, TargetTankTemperatureHigh/16);
+	//megaprintf("TT TL TH: %d, %d, %d\n", TargetTankTemperature/16, TargetTankTemperatureLow/16, TargetTankTemperatureHigh/16);
 }
 
 void temp_SetTargetTemperature(uint8_t value)
@@ -65,7 +65,7 @@ void temp_SetHysteresisTemperature(uint8_t value)
 
 uint8_t temp_GetHysteresisTemperature(void)
 {
-	//printf("Get HT%d", TargetTankTemperatureHysteresis);
+	////megaprintf("Get HT%d", TargetTankTemperatureHysteresis);
 	return(TargetTankTemperatureHysteresis/4);
 }
 
@@ -98,11 +98,11 @@ uint8_t MeasureTemperature(void)
 {
 	uint8_t error_sensor_id = TEMPERATURE_SENSOR_COUNT; // means no sensor has error reading
 
-//    printf("T:");
+//    //megaprintf("T:");
 
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) {
 		if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) {
-//            printf(" NC");
+//            //megaprintf(" NC");
 			notify_error(i, NOT_CONNECTED);
 			error_sensor_id = i;
 			continue;
@@ -133,7 +133,7 @@ uint8_t MeasureTemperature(void)
 			Tsensors[i].error_counter = 0;
 		}
 	}
-//    printf("\n");
+//    //megaprintf("\n");
 	return error_sensor_id;
 }
 
@@ -147,11 +147,11 @@ void CheckTemperatureRanges(void)
 		if (t < TemperatureRanges[i][MIN])
 		{
 			notify_error(i, TOO_LOW);
-			printf("T%d LOW: %d < %d\n", i, t, TemperatureRanges[i][MIN]);
+			//megaprintf("T%d LOW: %d < %d\n", i, t, TemperatureRanges[i][MIN]);
 		}else if (t > TemperatureRanges[i][MAX])
 		{
 			notify_error(i, TOO_HIGH);
-			printf("T%d HIGH: %d > %d\n", i, t, TemperatureRanges[i][MAX]);
+			//megaprintf("T%d HIGH: %d > %d\n", i, t, TemperatureRanges[i][MAX]);
 		}
 	}
 }
