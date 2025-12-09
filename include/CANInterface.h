@@ -4,7 +4,11 @@
 #define NO_CHANGE_REQUESTED   255U     // writing 255 to parameter will result to no change
 #define CAN_TX_QUEUE_SIZE  16
 
-uint8_t Init_ComInterface(void);
+#define MCP2515_CS_DDR   DDRB
+#define MCP2515_CS_PORT  PORTB
+#define MCP2515_CS_PIN   PB2
+
+uint8_t CAN_Init(void);
 void SendBootupMessage(uint8_t debug_value);
 void SendBootupMessage2(uint8_t debug_value);
 void SendDebugMessage(uint8_t id, uint8_t debug_value[8]);

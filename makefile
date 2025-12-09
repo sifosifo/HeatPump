@@ -32,7 +32,7 @@ $(BUILD_DIR):
 	mkdir -p $@
 
 flash: $(BUILD_DIR)/$(TARGET).hex
-	$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyUSB0 -b 57600 -U flash:w:$<
+	$(AVRDUDE) -F -V -c arduino -p $(MCU) -P /dev/ttyUSB0 -b 115200 -U flash:w:$<
 
 clean:
 	rm -rf $(BUILD_DIR)

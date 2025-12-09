@@ -3,8 +3,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "ComInterface.h"
-
 typedef void (*Task_1_T)(void);
 
 Task_1_T Task_1;
@@ -25,7 +23,6 @@ ISR(TIMER1_OVF_vect)
 	Timestamp_s++;
 	TCNT1 = 65535 - 62500;	// 1s
 	//TCNT1 = 65535 - 6250;	// 100ms
-//	SendBootupMessage(0xAA);
 	(*Task_1)();
 	EventTimer_s++;
 }
@@ -53,7 +50,6 @@ void ClearEventTimer_s(void)
 ISR(__vector_default)
 {
 	TCNT1 = 65535 - 62500;	
-	SendBootupMessage(0xBB);
 	//megaprintf("vector_default");
 //	(*Task_1)();
 /*

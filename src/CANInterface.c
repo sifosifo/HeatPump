@@ -1,4 +1,4 @@
-#include "ComInterface.h"
+#include "CANInterface.h"
 #include <stdint.h>
 #include <avr/io.h>
 #include <string.h>		// memcpy
@@ -110,73 +110,31 @@ const uint8_t can_filter[] PROGMEM =
 };
 // You can receive 11 bit identifiers with either group 0 or 1.
 
-void SendBootupMessage(uint8_t debug_value)
-{	
-	#ifndef DEBUG
-	can_t msg;
-	
-	msg.id = 0x123;
-	msg.flags.rtr = 0;
-	msg.flags.extended = 0;
-	
-	msg.length = 5;
-	msg.data[0] = 0xde;
-	msg.data[1] = 0xad;
-	msg.data[2] = 0xbe;
-	msg.data[3] = 0xef;
-	msg.data[4] = debug_value;
-	
-	can_send_message(&msg);
-	#endif
+void mcp2515_force_reset(void)
+{
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR1) | (1<<SPR0);  // fosc/128 = very safe
+    SPSR = 0; 
+
+    // 1. Make sure CS pin is output and idle high
+    MCP2515_CS_DDR  |= (1 << MCP2515_CS_PIN);   // change if you use different pin
+    MCP2515_CS_PORT |= (1 << MCP2515_CS_PIN);
+
+    // 2. Send the RESET instruction (0xC0)
+    MCP2515_CS_PORT &= ~(1 << MCP2515_CS_PIN);   // CS low
+    SPDR = 0xC0;
+    while (!(SPSR & (1 << SPIF))) ;              // wait
+    MCP2515_CS_PORT |= (1 << MCP2515_CS_PIN);    // CS high
+
+    // 3. Wait — this delay is NON-NEGOTIABLE
+    _delay_ms(20);   // 10 ms is enough, 20 ms gives extra safety
 }
 
-void SendBootupMessage2(uint8_t debug_value)
-{	
-	#ifndef DEBUG
-	can_t msg;
-	
-	msg.id = 0x130;
-	msg.flags.rtr = 0;
-	msg.flags.extended = 0;
-	
-	msg.length = 5;
-	msg.data[0] = 0xde;
-	msg.data[1] = 0xad;
-	msg.data[2] = 0xbe;
-	msg.data[3] = 0xef;
-	msg.data[4] = debug_value;
-	
-	can_send_message(&msg);
-	#endif
-}
-
-void SendDebugMessage(uint8_t id, uint8_t debug_value[8])
-{	
-	#ifndef DEBUG
-	can_t msg;
-	
-	msg.id = id;
-	msg.flags.rtr = 0;
-	msg.flags.extended = 0;
-	
-	msg.length = 8;
-	msg.data[0] = debug_value[0];
-	msg.data[1] = debug_value[1];
-	msg.data[2] = debug_value[2];
-	msg.data[3] = debug_value[3];
-	msg.data[4] = debug_value[4];
-	msg.data[5] = debug_value[5];
-	msg.data[6] = debug_value[6];
-	msg.data[7] = debug_value[7];
-	
-	can_send_message(&msg);
-	#endif
-}
-
-uint8_t Init_ComInterface(void)
+uint8_t CAN_Init(void)
 {
 	uint8_t result = 0;
-//	//megaprintf("CAN\n");	
+
+	mcp2515_force_reset();
+
 	result = can_init(BITRATE_250_KBPS);	// Initialize MCP2515
 	
 	if(result == 0)
@@ -192,32 +150,7 @@ uint8_t Init_ComInterface(void)
 		//PCMSK1 |= (1<<PCINT8);
 		PCMSK0 |= (1<<1);
 	}
-	// Baudrate constants are in library in file mcp2515.c
-	
-	// Load filters and masks
-//	can_static_filter(can_filter);
-
 	return(result);
-}
-
-void CheckIfCANIsActive(void)
-{
-	static uint8_t CANactive = 0;	// Indicates if CAN was initialized correctly
-	uint8_t err;
-		
-	if(CANactive==0)
-	{
-		//megaprintf("Init CAN\n");
-		err = Init_ComInterface();
-		//megaprintf("Init status: %d\n", err);
-		if(err==0)
-		{	
-			CANactive = 0;
-		}else
-		{
-			CANactive = 1;
-		}
-	}
 }
 
 void force_reset()

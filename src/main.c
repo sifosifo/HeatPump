@@ -11,7 +11,7 @@
 #include "Temperature.h"
 #include "WaterFlow.h"
 #include "Relays.h"
-#include "ComInterface.h"
+#include "CANInterface.h"
 #include "Timer.h"
 #include "uart.h"
 #include "main.h"
@@ -212,19 +212,18 @@ void Task_1000ms(void)
 	PORTB ^= (1 << PB0);
 }
 
-
-
-int main(void)
-{
-	uint8_t sensor_id = 0;	
-
-	DDRB |= (1 << PB0); 
+void init(void)
+{	
 	wdt_disable();
-	timer_Init(&Task_1000ms);
-	//megaprintf("Init_Timer\n");	
+
+	CAN_Init();	// Initialize CAN interface
 	
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) Init_Temperature(i);
-	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup
+	temp_SetHysteresisTemperature(0);
+	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
+	MeasureTemperature();	// Do measurement to flush random values
+	_delay_ms(1000);			// Wait for sensors to stabilize
+	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup	
 	//megaprintf("Init_Temperature\n");
 
 	flow_Init();
@@ -237,18 +236,26 @@ int main(void)
 	uart_init();
 	
 	//megaprintf("--------------Booting----------------\n");
-	register_error_callback(on_error_detected);		// Register callbacks
-	//RunPOST();
-	temp_SetHysteresisTemperature(0);
-	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
+	register_error_callback(on_error_detected);		// Register callbacks	
+	
+	timer_Init(&Task_1000ms);
+	//megaprintf("Init_Timer\n");	
+
 	wdt_enable(WDTO_8S);
+}
+
+int main(void)
+{
+	uint8_t sensor_id = 0;	
+
+	init();
+	
 	while (1)	// Idle loop
-	{		
-		#ifndef DEBUG
-		CheckIfCANIsActive();	
-		#endif
-		if(Process_1s)
+	{	
+		if(Process_1s)	// Process 1s tasks outside of interrupt
 		{
+			Process_1s = 0;	// Reset flag
+
 			flow_Process();	// Calculate flow from pulses
 			sensor_id = MeasureTemperature();	// Delays everything by 1s !
 			if(sensor_id==TEMPERATURE_SENSOR_COUNT)	// TEMPERATURE_SENSOR_COUNT means no sensor had issue with reading
@@ -259,11 +266,9 @@ int main(void)
 			{
 				//megaprintf("Init_Temperature\n");
 				Init_Temperature(sensor_id);		// try to recover temperature sensor
-			}
-			Process_1s = 0;	// Reset flag
+			}			
 		}
 		can_process();	// Send messages from queue	
 	}	
 	return 0;
 }
- 
