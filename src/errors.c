@@ -1,5 +1,5 @@
 //#include <stdint.h>
-#include <stdio.h>	// For printf to UART
+#include <stdio.h>	// For //megaprintf to UART
 #include <avr/io.h>	// Access to ports for Halt function
 #include <avr/interrupt.h>	// cli()
 #include "errors.h"
@@ -38,7 +38,7 @@ void error_SetError(uint8_t ModuleID, uint8_t error_code)
 
 void error_Halt(void)
 {       // Something must went wrong
-	printf("Going off\n");
+	//megaprintf("Going off\n");
 	DDRB = 0;
 	DDRC = 0;
 	DDRD = 0;

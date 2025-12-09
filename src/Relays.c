@@ -16,7 +16,7 @@ void DriveRelay(uint8_t relay_id)
 	{
 		*Relays[relay_id].PORT |= (1 << Relays[relay_id].pin);
 	}	
-	printf("R%d%d\n", relay_id, (~Relays[relay_id].state)&0x01);
+	//megaprintf("R%d%d\n", relay_id, (~Relays[relay_id].state)&0x01);
 }
 
 void SetRelayState(uint8_t relay_id, uint8_t new_state)
@@ -54,11 +54,11 @@ uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 		{
 			if(i == AUX)
 			{
-				printf("AUX:%d/n", output>>i);
+				//megaprintf("AUX:%d/n", output>>i);
 				SetRelayState(i, (output>>i) & 0x01);
 			}else
 			{
-				printf("OUT%s:%d", i, output>>i);
+				//megaprintf("OUT%s:%d", i, output>>i);
 				//
 			}
 		}

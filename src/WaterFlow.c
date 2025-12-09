@@ -66,7 +66,7 @@ void flow_Process(void)
 	{
 		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
 	}
-	//printf("PFR:\t%d, SFR:\t%d\n", Pulses_[0], Pulses_[1]);
+	////megaprintf("PFR:\t%d, SFR:\t%d\n", Pulses_[0], Pulses_[1]);
 }
 
 uint8_t flow_WaterFlowNominal(void)

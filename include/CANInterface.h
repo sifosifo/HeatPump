@@ -8,8 +8,11 @@
 #define CAN_TX_QUEUE_SIZE  16
 #define CAN_RX_QUEUE_SIZE  8
 
-uint8_t can_Init(void);
-void can_CheckIfCANIsActive(void);
+#define MCP2515_CS_DDR   DDRB
+#define MCP2515_CS_PORT  PORTB
+#define MCP2515_CS_PIN   PB2
+
+uint8_t CAN_Init(void);
 
 void can_SendErrorMsg(const uint8_t *data);  /* non-blocking */
 void can_process(void);

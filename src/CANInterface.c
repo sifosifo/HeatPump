@@ -1,4 +1,4 @@
-#include "ComInterface.h"
+#include "CANInterface.h"
 #include <stdint.h>
 #include <avr/io.h>
 #include <string.h>		// memcpy
@@ -116,18 +116,39 @@ const uint8_t can_filter[] PROGMEM =
 };
 // You can receive 11 bit identifiers with either group 0 or 1.
 
-uint8_t can_Init(void)
+void mcp2515_force_reset(void)
+{
+	SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR1) | (1<<SPR0);  // fosc/128 = very safe
+    SPSR = 0; 
+
+    // 1. Make sure CS pin is output and idle high
+    MCP2515_CS_DDR  |= (1 << MCP2515_CS_PIN);   // change if you use different pin
+    MCP2515_CS_PORT |= (1 << MCP2515_CS_PIN);
+
+    // 2. Send the RESET instruction (0xC0)
+    MCP2515_CS_PORT &= ~(1 << MCP2515_CS_PIN);   // CS low
+    SPDR = 0xC0;
+    while (!(SPSR & (1 << SPIF))) ;              // wait
+    MCP2515_CS_PORT |= (1 << MCP2515_CS_PIN);    // CS high
+
+    // 3. Wait — this delay is NON-NEGOTIABLE
+    _delay_ms(20);   // 10 ms is enough, 20 ms gives extra safety
+}
+
+uint8_t CAN_Init(void)
 {
 	uint8_t result = 0;
-//	printf("CAN\n");	
+
+	mcp2515_force_reset();
+
 	result = can_init(BITRATE_250_KBPS);	// Initialize MCP2515
 	
 	if(result == 0)
 	{	// Error - not possible to initialise		
-//		printf("FAIL\n");
+//		//megaprintf("FAIL\n");
 	}else
 	{
-//		printf("OK\n");	
+//		//megaprintf("OK\n");	
 		// Enable interrupt on pin change on PORTB
 		PCICR |= (1<<PCIE0);
 		//= PCIFR & (1<<PCIF1);	
@@ -135,44 +156,13 @@ uint8_t can_Init(void)
 		//PCMSK1 |= (1<<PCINT8);
 		PCMSK0 |= (1<<1);
 	}
-	// Baudrate constants are in library in file mcp2515.c
-	
-	// Load filters and masks
-//	can_static_filter(can_filter);
-
 	return(result);
-}
-
-void can_CheckIfCANIsActive(void)
-{
-	static uint8_t CANactive = 0;	// Indicates if CAN was initialized correctly
-	uint8_t err;
-		
-	if(CANactive==0)
-	{
-		printf("Init CAN\n");
-		err = can_Init();
-		printf("Init status: %d\n", err);
-		if(err==0)
-		{	
-			CANactive = 0;
-		}else
-		{
-			CANactive = 1;
-		}
-	}
 }
 
 void force_reset()
 {
-	printf("Reset requested");
+	//megaprintf("Reset requested");
     cli();              // Disable interrupts (important so nothing delays the WDT)
-//    wdt_enable(WDTO_15MS);  // Enable watchdog with shortest timeout (15 ms)
-//	while (1);
-//asm volatile ("jmp 0");
-
-    MCUSR = 0;                      // IMPORTANT: clear reset flags
-    wdt_disable();                  // Disable WDT completely
     wdt_enable(WDTO_15MS);          // Re-enable with shortest timeout
     while (1);  
 }
