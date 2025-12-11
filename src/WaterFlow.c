@@ -47,12 +47,6 @@ void flow_StorePulses_s(void)		// Do minimum in interrupt - just store
 	}
 }
 
-#define FLOW_NUMERATOR_USED 50	// Timig seems to be off, to compensate, added magix constant
-// --- WARNING CHECK ---
-#if (FLOW_NUMERATOR_USED != 50)
-#warning "FLOW_NUMERATOR_USED is not 50. Ensure timing is 1.0s and the value is correct."
-#endif
-
 //	Sensor range:	0-25	l/min
 //					0-165	Hz
 //	F[Hz] = 6,6 * Q[l/min]
@@ -64,7 +58,7 @@ void flow_Process(void)
 {
 	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
-		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)FLOW_NUMERATOR_USED) / (uint16_t)33);
+		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)50) / (uint16_t)33);
 	}
 	////megaprintf("PFR:\t%d, SFR:\t%d\n", Pulses_[0], Pulses_[1]);
 }

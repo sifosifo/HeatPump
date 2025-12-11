@@ -213,7 +213,8 @@ void Task_1000ms(void)
 }
 
 void init(void)
-{	
+{
+	MCUSR = 0;	// Fix stuck in bootloader issue
 	wdt_disable();
 
 	CAN_Init();	// Initialize CAN interface
