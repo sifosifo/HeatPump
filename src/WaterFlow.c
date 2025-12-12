@@ -1,6 +1,7 @@
 #include <avr/interrupt.h>
 #include <stdio.h>
 #include "WaterFlow.h"
+#include "main.h"
 
 uint8_t Pulses[FLOW_SENSOR_COUNT];		// Runtime pulses  - ongoing counting
 uint8_t Pulses_[FLOW_SENSOR_COUNT];		// Captured pulses - input for processing
@@ -8,10 +9,11 @@ uint8_t Flows_dclmin[FLOW_SENSOR_COUNT];
 
 void flow_Init(void)
 {
+	crash_info.last_function = 32;
 	uint8_t i;
 
 	// Reset variables
-	for(i = 0; i++; i < FLOW_SENSOR_COUNT)
+	for(i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Pulses[i] = 0;
 		Pulses_[i] = 0;
@@ -29,6 +31,7 @@ void flow_Init(void)
 
 uint8_t flow_GetFlow_dclmin(uint8_t SensorIndex)
 {
+	crash_info.last_function = 33;
 	if(SensorIndex<FLOW_SENSOR_COUNT)
 	{
 		return(Flows_dclmin[SensorIndex]);
@@ -40,6 +43,7 @@ uint8_t flow_GetFlow_dclmin(uint8_t SensorIndex)
 
 void flow_StorePulses_s(void)		// Do minimum in interrupt - just store
 {
+	crash_info.last_function = 34;
 	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Pulses_[i] = Pulses[i];
@@ -56,6 +60,7 @@ void flow_StorePulses_s(void)		// Do minimum in interrupt - just store
 //	Q[dcl/min]	= pulses * 100 / 66s
 void flow_Process(void)
 {
+	crash_info.last_function = 35;
 	for(uint8_t i = 0; i < FLOW_SENSOR_COUNT; i++)
 	{
 		Flows_dclmin[i] = (uint8_t)(((uint16_t)Pulses_[i] * (uint16_t)50) / (uint16_t)33);
@@ -65,6 +70,7 @@ void flow_Process(void)
 
 uint8_t flow_WaterFlowNominal(void)
 {
+	crash_info.last_function = 36;
 	uint8_t nominal = 0;
 	uint8_t PrimaryFlow_dcl;
 	uint8_t SecondaryFlow_dcl;
@@ -81,10 +87,12 @@ uint8_t flow_WaterFlowNominal(void)
 
 ISR(INT0_vect)
 {
+	crash_info.last_function = 37;
 	Pulses[PRIMARY_SIDE]++;
 }
 
 ISR(INT1_vect)
 {
+	crash_info.last_function = 38;
 	Pulses[SECONDARY_SIDE]++;
 }

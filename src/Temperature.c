@@ -3,6 +3,7 @@
 #include <util/delay.h>
 #include "Temperature.h"
 #include "callbacks.h"
+#include "main.h"
 
 /* ------------------------------------------------------------------
    Sensor table
@@ -41,6 +42,7 @@ static int8_t TemperatureRanges[TEMPERATURE_SENSOR_COUNT][2] =
 
 void recalculateThresholds(void)
 {
+	crash_info.last_function = 22;
 	TargetTankTemperatureHigh = TargetTankTemperature + TargetTankTemperatureHysteresis/2;
 	TargetTankTemperatureLow = TargetTankTemperature - TargetTankTemperatureHysteresis/2;
 	//megaprintf("TT TL TH: %d, %d, %d\n", TargetTankTemperature/16, TargetTankTemperatureLow/16, TargetTankTemperatureHigh/16);
@@ -48,23 +50,27 @@ void recalculateThresholds(void)
 
 void temp_SetTargetTemperature(uint8_t value)
 {
+	crash_info.last_function = 23;
 	TargetTankTemperature = value * 4;
 	recalculateThresholds();
 }
 
 uint8_t temp_GetTargetTemperature(void)
 {
+	crash_info.last_function = 24;
 	return(TargetTankTemperature/4);
 }
 
 void temp_SetHysteresisTemperature(uint8_t value)
 {
+	crash_info.last_function = 25;
 	TargetTankTemperatureHysteresis = value * 4;
 	recalculateThresholds();
 }
 
 uint8_t temp_GetHysteresisTemperature(void)
 {
+	crash_info.last_function = 26;
 	////megaprintf("Get HT%d", TargetTankTemperatureHysteresis);
 	return(TargetTankTemperatureHysteresis/4);
 }
@@ -74,6 +80,7 @@ uint8_t temp_GetHysteresisTemperature(void)
    ------------------------------------------------------------------ */
 void Init_Temperature(uint8_t error_sensor_id)
 {
+	crash_info.last_function = 27;
 	if(error_sensor_id >= TEMPERATURE_SENSOR_COUNT)
 	{
 		notify_error(TEMPERATURE_SENSOR_COUNT, OTHER);
@@ -96,6 +103,7 @@ void Init_Temperature(uint8_t error_sensor_id)
    ------------------------------------------------------------------ */
 uint8_t MeasureTemperature(void)
 {
+	crash_info.last_function = 28;
 	uint8_t error_sensor_id = TEMPERATURE_SENSOR_COUNT; // means no sensor has error reading
 
 //    //megaprintf("T:");
@@ -139,6 +147,7 @@ uint8_t MeasureTemperature(void)
 
 void CheckTemperatureRanges(void)
 {
+	crash_info.last_function = 29;
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i)
 	{
 		if (Tsensors[i].state != TEMPERATURE_SENSOR_OK) continue;
@@ -158,14 +167,16 @@ void CheckTemperatureRanges(void)
 
 int16_t GetTemperature(uint8_t index)
 {
+	crash_info.last_function = 30;
 	return Tsensors[index].temperature;
 }
 
 uint8_t GetTankTemperatureState(void)
 {
+	crash_info.last_function = 31;
 	_Bool start  = GetTemperature(TANK_BOTTOM) <= TargetTankTemperatureLow;
 
-	float dT_water = GetTemperature(SECONDARY_SIDE_OUTLET) - GetTemperature(SECONDARY_SIDE_INLET);   // secondary side ΔT
+//	float dT_water = GetTemperature(SECONDARY_SIDE_OUTLET) - GetTemperature(SECONDARY_SIDE_INLET);   // secondary side ΔT
 //    float power_now = flow_tank_side * dT_water * 1.163;   // approx. kW
 
 	// Remember maximum power that occurred in the first 30–60 min of this run

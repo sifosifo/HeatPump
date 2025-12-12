@@ -1,5 +1,7 @@
 # Build output
 build/
+# CPPcheck analysis
+tmp/
 
 # Build artifacts
 *.o
@@ -9,6 +11,7 @@ build/
 *.map
 
 serial.log
+serial*
 
 # VS Code
 .vscode/

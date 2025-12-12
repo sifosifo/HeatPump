@@ -22,6 +22,19 @@ static const char * const state_names[] PROGMEM =
 	"FATAL_ERROR"
 };
 
+typedef struct
+{
+    uint16_t t1;
+	uint16_t t2;
+	uint16_t t3;
+	uint8_t last_state;
+	uint8_t last_function;
+	uint8_t mcusr;
+	uint8_t sent;
+} crash_info_t;
+
+extern crash_info_t crash_info __attribute__((section(".noinit")));
+
 extern uint8_t POST_status;
 extern uint8_t CurrentState;
 extern uint8_t ActiveErrors;

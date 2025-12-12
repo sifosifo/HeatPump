@@ -38,4 +38,8 @@ void register_error_callback(error_detected_cb_t cb);
 
 void notify_error(uint8_t error_code, uint8_t type);   
 
+// crash_report.h
+#define ENTER_FUNCTION()  static const uint8_t func_id = __COUNTER__; \
+                          crash_set_last_function(func_id)
+
 #endif

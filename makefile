@@ -11,7 +11,7 @@ DEP = $(OBJ:.o=.d)
 
 CC = avr-gcc
 CFLAGS = -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) -Iinclude -MMD -MP
-LDFLAGS = -mmcu=$(MCU) -Wl,-u,vfprintf -lprintf_min
+LDFLAGS = -mmcu=$(MCU) -Wl,-u,vfprintf -lprintf_min -Wall -Wextra
 
 AVRDUDE = avrdude
 

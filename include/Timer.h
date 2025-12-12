@@ -10,3 +10,7 @@ uint32_t timer_GetTimestamp_s(void);
 void timer_Tick(void);
 uint16_t GetEventTimer_s(void);
 void ClearEventTimer_s(void);
+
+void timer_start_ms(uint8_t index);
+void timer_stop_ms(uint8_t index);
+uint16_t timer_get_ms(uint8_t index);

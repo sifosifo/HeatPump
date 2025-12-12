@@ -1,5 +1,6 @@
 #include "Relays.h"
 #include "uart.h"
+#include "main.h"
 
 struct relay Relays[RELAY_COUNT] = {
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 5, OFF, 0,
@@ -9,6 +10,7 @@ struct relay Relays[RELAY_COUNT] = {
 
 void DriveRelay(uint8_t relay_id)
 {
+	crash_info.last_function = 17;
 	if(Relays[relay_id].state == ON)
 	{		
 		*Relays[relay_id].PORT &= ~(1 << Relays[relay_id].pin);
@@ -21,17 +23,21 @@ void DriveRelay(uint8_t relay_id)
 
 void SetRelayState(uint8_t relay_id, uint8_t new_state)
 {
+	crash_info.last_function = 18;
 	Relays[relay_id].state = new_state;
 	DriveRelay(relay_id);
 }
 
+/*
 uint8_t GetRelayState(uint8_t relay_id)
 {
+	crash_info.last_function = 19;
 	return(Relays[relay_id].state);
-}
+}*/
 
 void Init_Relays(void)
 {
+	crash_info.last_function = 20;
 	uint8_t i;
 
 	for(i=0; i<RELAY_COUNT; i++)
@@ -45,7 +51,7 @@ void Init_Relays(void)
 // mask 0 means ignore, 1 means drive output
 uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 {
-	uint8_t read_output = 0;
+	crash_info.last_function = 21;
 	uint8_t i;
 
 	for(i=0; i<RELAY_COUNT; i++)
@@ -62,6 +68,5 @@ uint8_t DriveOutputsByCAN(uint8_t output, uint8_t mask)
 				//
 			}
 		}
-		read_output += Relays[i].state<<i;
 	}
 }
