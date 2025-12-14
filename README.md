@@ -1,6 +1,7 @@
 # HeatPump
-Main control unit for water to water heat pump
+Main control unit for earth (ground loop) to water heat pump
 Unit is based on Arduino Nano clone with ATmega328p
+
 Inputs:
 - 6 DS18B20 temperature sensors
   Primary side inlet and outlet temperature
@@ -8,17 +9,12 @@ Inputs:
   Upper and lower tank temperatures
 - 2 flow meters
   Primary and secondary side flow measurement
+
 Output:
-- 3 Relays
+- 4 Relays
   Primary and secondary side circulating pump
   Heat pump compressor
-
-Issues:
-- When serial port is not connected to PC, AVR restarts after pump check
-
-Missing features:
-- check if temperature sensors are ok
-
+  AUX - for example pump and fan pushing heat from water tank to house
 
 
 CAN library (MCP2515):
