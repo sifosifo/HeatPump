@@ -4,11 +4,10 @@
 ** The functions contained within this library implement the Dallas 1-Wire protocol.
 **
 ** F_CPU should be defined by source code using this library
-** If it is not defined, it will be defined with a default value of 1000000UL
-** in util/delay.h*/
-
+** If it is not defined, it will be defined with a default value of 1000000UL in util/delay.h*/
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>	// cli(), sei()
 #include <stdbool.h>
 #include "ds18b20.h"
 
@@ -40,9 +39,6 @@
 #define THIGH   2
 #define TLOW    3
 #define CONFIG  4
-// reserved     5
-// reserved     6
-// reserved     7
 #define CRC     8
 
 /* nominally private routines */
@@ -63,9 +59,8 @@ static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
 	return crc;
 }
 
-uint8_t _reset(const ds18b20_t *p)
+uint8_t _reset(const ds18b20_t *p)	/* return TRUE if DS18B20 device detected, FALSE if not detected */
 {
-/* return TRUE if DS18B20 device detected, FALSE if not detected */
 	ds_port_t port;
 	uint8_t   pin;
 	uint8_t   plow;
@@ -77,12 +72,9 @@ uint8_t _reset(const ds18b20_t *p)
 	plow  = p->plow;
 	phigh = p->phigh;
 	dq = FALSE;
-
-	/*
-	** pull bus low for Trstl (480us)
-	** then release and wait a bit before sampling
-	*/
-	switch(port)
+	
+	cli();
+	switch(port)	// pull bus low for Trstl (480us) then release and wait a bit before sampling
 	{
 #ifdef PORTA
 		case DS_PORT_A:
@@ -140,17 +132,16 @@ uint8_t _reset(const ds18b20_t *p)
 			return EBADR;
 			break;
 	}
-
 	_delay_us(Trsth - Trstwait);
+	sei();
 
 	/* DQ=LOW  <-> present (return TRUE) */
 	/* DQ=HIGH <-> not present (return FALSE) */
 	return (dq ? FALSE : TRUE);
 }
 
-uint8_t _read_dq(const ds18b20_t *p)
+uint8_t _read_dq(const ds18b20_t *p)	/* returns the DQ level - this fn allows other functions to abstract the reading */
 {
-/* returns the DQ level - this fn allows other functions to abstract the reading */
 	ds_port_t port;
 	uint8_t   pin;
 	uint8_t   plow;
@@ -200,18 +191,14 @@ uint8_t _read_dq(const ds18b20_t *p)
 		default:
 			break;
 	}
-
 	return dq;
 }
 
-
-uint8_t _write_byte(const ds18b20_t *p, uint8_t data)
+uint8_t _write_byte(const ds18b20_t *p, uint8_t data)	/* bytes are written LSB first */
 {
-/* bytes are written LSB first */
 	ds_port_t port;
 	uint8_t   plow;
 	uint8_t   phigh;
-
 	uint8_t n;
 	uint8_t ch;
 	uint8_t bit;
@@ -221,118 +208,58 @@ uint8_t _write_byte(const ds18b20_t *p, uint8_t data)
 	phigh = p->phigh;
 
 	ch = data;
+	cli();
 	for (n = 0; n < 8; n++)
 	{
 		bit = ch % 2;
 
-		if (bit == 0)
+		switch(port)	// Write bit
 		{
-			/*
-			** write 0
-			** pull bus low for Tlow0 (60us) then release
-			*/
-			switch(port)
-			{
 #ifdef PORTA
-				case DS_PORT_A:
-					DDRA = DDRA | phigh;
-					PORTA = PORTA & plow;
-					_delay_us(Tlow0);
-					DDRA = DDRA & plow;
-					PORTA = PORTA | phigh;  // Enable internal pull-up
-					break;
+			case DS_PORT_A:
+				DDRA = DDRA | phigh;
+				PORTA = PORTA & plow;
+				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
+				DDRA = DDRA & plow;
+				PORTA = PORTA | phigh;  // Enable internal pull-up
+				break;
 #endif
 #ifdef PORTB
-				case DS_PORT_B:
-					DDRB = DDRB | phigh;
-					PORTB = PORTB & plow;
-					_delay_us(Tlow0);
-					DDRB = DDRB & plow;
-					PORTB = PORTB | phigh;  // Enable internal pull-up
-					break;
+			case DS_PORT_B:
+				DDRB = DDRB | phigh;
+				PORTB = PORTB & plow;
+				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
+				DDRB = DDRB & plow;
+				PORTB = PORTB | phigh;  // Enable internal pull-up
+				break;
 #endif
 #ifdef PORTC
-				case DS_PORT_C:
-					DDRC = DDRC | phigh;
-					PORTC = PORTC & plow;
-					_delay_us(Tlow0);
-					DDRC = DDRC & plow;
-					PORTC = PORTC | phigh;  // Enable internal pull-up
-					break;
+			case DS_PORT_C:
+				DDRC = DDRC | phigh;
+				PORTC = PORTC & plow;
+				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
+				DDRC = DDRC & plow;
+				PORTC = PORTC | phigh;  // Enable internal pull-up
+				break;
 #endif
 #ifdef PORTD
-				case DS_PORT_D:
-					DDRD = DDRD | phigh;
-					PORTD = PORTD & plow;
-					_delay_us(Tlow0);
-					DDRD = DDRD & plow;
-					PORTD = PORTD | phigh;  // Enable internal pull-up
-					break;
+			case DS_PORT_D:
+				DDRD = DDRD | phigh;
+				PORTD = PORTD & plow;
+				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
+				DDRD = DDRD & plow;
+				PORTD = PORTD | phigh;  // Enable internal pull-up
+				break;
 #endif
-				default:
-					break;
-			}
-		}
-		else
-		{
-			/* write 1 */
-			/* pull bus low for Tlow1, then release and wait rest of slot */
-			switch(port)
-			{
-#ifdef PORTA
-				case DS_PORT_A:
-					DDRA = DDRA | phigh;
-					PORTA = PORTA & plow;
-					_delay_us(Tlow1);
-					DDRA = DDRA & plow;
-					PORTA = PORTA | phigh;  // Enable internal pull-up
-					_delay_us(Tslot - Tlow1);
-					break;
-#endif
-#ifdef PORTB
-				case DS_PORT_B:
-					DDRB = DDRB | phigh;
-					PORTB = PORTB & plow;
-					_delay_us(Tlow1);
-					DDRB = DDRB & plow;
-					PORTB = PORTB | phigh;  // Enable internal pull-up
-					_delay_us(Tslot - Tlow1);
-					break;
-#endif
-#ifdef PORTC
-				case DS_PORT_C:
-					DDRC = DDRC | phigh;
-					PORTC = PORTC & plow;
-					_delay_us(Tlow1);
-					DDRC = DDRC & plow;
-					PORTC = PORTC | phigh;  // Enable internal pull-up
-					_delay_us(Tslot - Tlow1);
-					break;
-#endif
-#ifdef PORTD
-				case DS_PORT_D:
-					DDRD = DDRD | phigh;
-					PORTD = PORTD & plow;
-					_delay_us(Tlow1);
-					DDRD = DDRD & plow;
-					PORTD = PORTD | phigh;  // Enable internal pull-up
-					_delay_us(Tslot - Tlow1);
-					break;
-#endif
-				default:
-					break;
-			}
-		}
-
-		/* must wait Trec time after each bit is transmitted */
-		_delay_us(Trec);
-
+			default:
+				break;
+		}		
+		_delay_us(Trec);	/* must wait Trec time after each bit is transmitted */
 		ch = ch >> 1;
 	}
-
+	sei();
 	return 0;
 }
-
 
 uint8_t _read_byte(const ds18b20_t *p)
 {
@@ -351,10 +278,9 @@ uint8_t _read_byte(const ds18b20_t *p)
 	phigh = p->phigh;
 
 	data = 0;
-
-	for (n = 0; n < 8; n++)
+	cli();
+	for (n = 0; n < 8; n++)	// Initiate read time slot: pull low briefly
 	{
-		// Initiate read time slot: pull low briefly
 		switch(port)
 		{
 #ifdef PORTA
@@ -409,20 +335,17 @@ uint8_t _read_byte(const ds18b20_t *p)
 				bit = 0;
 				break;
 		}
-
-		data |= (bit << n);
-
-		/* Wait the rest of the slot + recovery */
-		_delay_us(Tslot - Trdv + 1 + Trec);
+		data |= (bit << n);		
+		_delay_us(Tslot - Trdv + 1 + Trec);	/* Wait the rest of the slot + recovery */
 	}
+	sei();
 	return data;
 }
 
 /* nominally public routines*/
 
-uint8_t ds18b20_init(ds18b20_t *p)
+uint8_t ds18b20_init(ds18b20_t *p)	/* struct *p must have port and pin values set before this function is called */
 {
-/* struct *p must have port and pin values set before this function is called */
 	uint8_t max[4] = {7, 7, 6, 7};
 
 	/*
@@ -488,7 +411,6 @@ uint8_t ds18b20_init(ds18b20_t *p)
 			return EBADR;
 			break;
 	}
-
 	p->present = _reset(p);
 	return p->present;
 }

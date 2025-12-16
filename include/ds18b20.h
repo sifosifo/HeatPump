@@ -1,7 +1,6 @@
 #ifndef __ds18b20_h__
 #define __ds18b20_h__
 
-
 /* timers (usec) for reading and writing to DS18B20 */
 #define Tconv		750000	// maximum
 #define Tslot		60	// minimum
@@ -40,7 +39,6 @@ typedef enum
 	DS_PORT_D = 3
 } ds_port_t;
 
-
 typedef struct ds18b20
 {
 	int8_t    present;
@@ -60,10 +58,7 @@ typedef struct ds18b20
 	uint8_t   scratchpad[SCRATCHPAD_SIZE];
 } ds18b20_t;
 
-
 extern uint8_t ds18b20_init(ds18b20_t*);
 extern int16_t ds18b20_read_temperature(ds18b20_t*);
 
-
 #endif
-
