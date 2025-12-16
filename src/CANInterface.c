@@ -47,6 +47,14 @@ static volatile uint8_t rx_head = 0;
 static volatile uint8_t rx_tail = 0;
 static volatile uint8_t rx_count = 0;
 
+volatile uint8_t dropped_tx_msg_count = 0;
+volatile uint8_t dropped_rx_msg_count = 0;
+volatile uint8_t tx_msg_count = 0;
+volatile uint8_t rx_msg_count = 0;
+volatile uint8_t interrupt_storm_count = 0;
+
+can_custom_t msg_isr;	// Global instead of local in ISR to save stack space in case of rapid back to back ISR firing and eating through stack
+
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
  *
@@ -185,6 +193,9 @@ void tx_enqueue(const can_custom_t *msg)
 		tx_queue[tx_head] = *msg; // struct copy
 		tx_head = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
 		tx_count++;
+	}else
+	{
+		dropped_tx_msg_count++;
 	}
 	sei();   // re-enable interrupts
 }
@@ -215,6 +226,9 @@ static void rx_enqueue(const can_custom_t *msg)
 		rx_queue[rx_head] = *msg; // struct copy is OK and fast here
 		rx_head = (rx_head + 1) % CAN_RX_QUEUE_SIZE;
 		rx_count++;
+	}else
+	{
+		dropped_rx_msg_count++;
 	}
 	sei();
 }
@@ -240,9 +254,8 @@ static uint8_t rx_dequeue(can_custom_t *out)
 
 ISR(PCINT0_vect)
 {	
-	can_custom_t msg;
-	
-	if (can_get_message((can_t*)(&msg))) rx_enqueue(&msg);	
+	if (can_get_message((can_t*)(&msg_isr))) rx_enqueue(&msg_isr);
+	interrupt_storm_count++;
 }
 
 void can_save_crash(const crash_info_t *crash_info)
@@ -270,8 +283,14 @@ void can_SaveRAM(const uint8_t *data)
 {
 	can_custom_t msg;
 
-	set_metadata(BASE_CAN_ID - 1, 2, &msg);		
+	set_metadata(BASE_CAN_ID - 1, 5, &msg);
 	memcpy(msg.data.byte, data, 2);
+	msg.data.byte[2] = tx_msg_count;
+	msg.data.byte[3] = rx_msg_count;
+	msg.data.byte[4] = interrupt_storm_count;
+	tx_msg_count = 0;
+	rx_msg_count = 0;
+	interrupt_storm_count = 0;
 	tx_enqueue(&msg);
 }
 
@@ -279,11 +298,13 @@ void can_SendTimeMsg(void)
 {
 	can_custom_t msg;
 
-	set_metadata(BASE_CAN_ID + TIME*2 + 1, 6, &msg);
+	set_metadata(BASE_CAN_ID + TIME*2 + 1, 8, &msg);
 	for(uint8_t i=0; i<3; i++)
 	{
 		msg.data.word[i] = timer_get_ms(i);
-	}	
+	}
+	msg.data.byte[6] = dropped_tx_msg_count;
+	msg.data.byte[7] = dropped_rx_msg_count;
 	tx_enqueue(&msg);
 }
 
@@ -296,7 +317,8 @@ void can_process(void)
 
 	/* Process rx messages */
 	while (rx_dequeue(&msg))
-	{		
+	{
+		rx_msg_count++;	
 		// Even ID is request, Odd ID is reply
 		// Request ID is BASE_CAN_ID + message_id * 2		
 		switch(msg.id++)	// Switch uses id, incremented id is used for response
@@ -378,10 +400,10 @@ void can_process(void)
 	}
 
 	/* Process tx messages */
-	if (tx_count == 0) return;
-
-	while(tx_dequeue(&msg) && can_check_free_buffer())	// Order matters here 
+	while ((tx_count > 0) && can_check_free_buffer())
 	{
+		tx_msg_count++;
+		tx_dequeue(&msg);  // safe because we checked tx_count > 0
 		can_send_message((can_t*)(&msg));
 	}
 }

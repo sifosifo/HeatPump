@@ -7,7 +7,7 @@
 #define BASE_CAN_ID	0x100
 #define NO_CHANGE_REQUESTED   255U     // writing 255 to parameter will result to no change
 #define CAN_TX_QUEUE_SIZE  16
-#define CAN_RX_QUEUE_SIZE  8
+#define CAN_RX_QUEUE_SIZE  64
 
 #define MCP2515_CS_DDR   DDRB
 #define MCP2515_CS_PORT  PORTB

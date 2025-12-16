@@ -250,7 +250,6 @@ void Task_1000ms(void)
 {
 	crash_info.last_function = 3;
 	flow_StorePulses_s();	// Just store impulses and process in ProcessFlow_s	
-	timer_Tick();		// Maintain uptime timestamp
 	Process_1s = 1;		// Trigger 1s tasks
 	PORTB ^= (1 << PB0);
 }

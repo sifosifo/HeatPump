@@ -1,14 +1,12 @@
-/*
-** Dallas DS18B20 Temperature Sensor Library (Atmel AVR)
+/* Dallas DS18B20 Temperature Sensor Library (Atmel AVR)
 **
 ** This is a library to access the Dallas DS18B20 temperature sensor.
 ** The functions contained within this library implement the Dallas 1-Wire protocol.
-*/
-/*
+**
 ** F_CPU should be defined by source code using this library
 ** If it is not defined, it will be defined with a default value of 1000000UL
-** in util/delay.h
-*/
+** in util/delay.h*/
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdbool.h>
@@ -32,11 +30,9 @@
 #define RECALL_E2               0xb8
 #define READ_POWER_SUPPLY       0xb4
 
-
 #define CRC_MASK                0xff00000000000000L
 #define SERIAL_MASK             0x00ffffffffffff00L
 #define FAMILY_MASK             0x00000000000000ffL
-
 
 /* registers */
 #define TEMPLSB 0
@@ -49,10 +45,7 @@
 // reserved     7
 #define CRC     8
 
-
-/*
-** nominally private routines
-*/
+/* nominally private routines */
 
 // Dallas/Maxim CRC8 for 1-Wire (polynomial 0x8C, reversed)
 static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
@@ -70,7 +63,7 @@ static uint8_t ds18b20_crc8(const uint8_t *data, uint8_t len)
 	return crc;
 }
 
-uint8_t _reset(ds18b20_t *p)
+uint8_t _reset(const ds18b20_t *p)
 {
 /* return TRUE if DS18B20 device detected, FALSE if not detected */
 	ds_port_t port;
@@ -155,8 +148,7 @@ uint8_t _reset(ds18b20_t *p)
 	return (dq ? FALSE : TRUE);
 }
 
-
-uint8_t _read_dq(ds18b20_t *p)
+uint8_t _read_dq(const ds18b20_t *p)
 {
 /* returns the DQ level - this fn allows other functions to abstract the reading */
 	ds_port_t port;
@@ -213,7 +205,7 @@ uint8_t _read_dq(ds18b20_t *p)
 }
 
 
-uint8_t _write_byte(ds18b20_t *p, uint8_t data)
+uint8_t _write_byte(const ds18b20_t *p, uint8_t data)
 {
 /* bytes are written LSB first */
 	ds_port_t port;
@@ -342,7 +334,7 @@ uint8_t _write_byte(ds18b20_t *p, uint8_t data)
 }
 
 
-uint8_t _read_byte(ds18b20_t *p)
+uint8_t _read_byte(const ds18b20_t *p)
 {
 	ds_port_t port;
 	uint8_t   pin;
@@ -423,15 +415,10 @@ uint8_t _read_byte(ds18b20_t *p)
 		/* Wait the rest of the slot + recovery */
 		_delay_us(Tslot - Trdv + 1 + Trec);
 	}
-
 	return data;
 }
 
-
-
-/*
-** nominally public routines
-*/
+/* nominally public routines*/
 
 uint8_t ds18b20_init(ds18b20_t *p)
 {

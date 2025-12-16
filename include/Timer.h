@@ -7,7 +7,6 @@
 
 void timer_Init(void *Task_1000ms);
 uint32_t timer_GetTimestamp_s(void);
-void timer_Tick(void);
 uint16_t GetEventTimer_s(void);
 void ClearEventTimer_s(void);
 

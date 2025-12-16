@@ -22,7 +22,7 @@ void timer_Init(void *Task_1000ms)
 
 	// Initialize Timer2 for 1ms interrupts
    	TCCR2A = (1<<WGM21);                // CTC
-    TCCR2B = (1<<CS22);      // prescaler 64
+    TCCR2B = (1<<CS22);      // prescaler 32
     // 16MHz / 64 = 250 kHz → 250 ticks = 1 ms → OCR2A = 249
     OCR2A = 249;
     TIMSK2 = (1<<OCIE2A);
@@ -61,11 +61,6 @@ void timer_stop_ms(uint8_t index)
 uint16_t timer_get_ms(uint8_t index)
 {
 	return(Timestamp_max_ms[index]);
-}
-
-void timer_Tick(void)
-{
-	Timestamp_s++;
 }
 
 uint32_t timer_GetTimestamp_s(void)
