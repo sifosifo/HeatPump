@@ -1,8 +1,9 @@
 #include "Relays.h"
 #include "uart.h"
 #include "main.h"
+#include "callbacks.h"
 
-struct relay Relays[RELAY_COUNT] = {
+struct relay_t Relays[RELAY_COUNT] = {
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 5, OFF, 0,
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 6, OFF, 0,
 	(uint8_t*)&PORTD, (uint8_t*)&DDRD, (uint8_t*)&PIND, 7, OFF, 0,
@@ -28,12 +29,12 @@ void SetRelayState(uint8_t relay_id, uint8_t new_state)
 	DriveRelay(relay_id);
 }
 
-/*
+
 uint8_t GetRelayState(uint8_t relay_id)
 {
 	crash_info.last_function = 19;
 	return(Relays[relay_id].state);
-}*/
+}
 
 void Init_Relays(void)
 {

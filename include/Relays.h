@@ -6,10 +6,10 @@
 
 typedef enum {PRIMARY_CIRCULATION_PUMP, SECONDARY_CIRCULATION_PUMP, COMPRESSOR, AUX, RELAY_COUNT} relay_index;
 
-#define ON	(uint8_t)0
-#define OFF	(uint8_t)1
+//#define ON	(uint8_t)0
+//#define OFF	(uint8_t)1
 
-struct relay
+struct relay_t
 {
 	uint8_t* PORT;
 	uint8_t* DDR;

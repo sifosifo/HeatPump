@@ -123,8 +123,8 @@ void ProcessStateMachine_s(void)
 		case OFF_COOLDOWN:	// Let circulating pumps run for some time after compresor was turned off
 			if(EventTimer_s>COMPRESSOR_COOLDOWN_PERIOD)
 			{
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, OFF);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, OFF);
 				ChangeState(OFF_LOCKED);
 				ClearEventTimer_s();
 			}
@@ -144,8 +144,8 @@ void ProcessStateMachine_s(void)
 			{				
 				//megaprintf("Heatpump ON, was off for %d seconds\n", EventTimer_s);
 				ChangeState(ON_FLOW_CHECKING);			
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 0);
-				SetRelayState(SECONDARY_CIRCULATION_PUMP, 0);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, ON);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, ON);
 				ClearEventTimer_s();
 			}
 			if(flow_WaterFlowNominal())	// Block heatpump in case of nominal flow detected
@@ -173,7 +173,7 @@ void ProcessStateMachine_s(void)
 					//megaprintf("Actual/Desired flow after %ds\n", EventTimer_s);
 					//megaprintf("Primary:\t%d/%d l/min\n", PrimaryFlow_dcl/10, PRIMARY_MIN_FLOW/10);
 					//megaprintf("Secondary:\t%d/%d l/min\n", SecondaryFlow_dcl/10, SECONDARY_MIN_FLOW/10);
-					SetRelayState(COMPRESSOR, 0);
+					SetRelayState(COMPRESSOR, ON);
 					ChangeState(ON_LOCKED);
 					ClearEventTimer_s();
 				}
@@ -196,9 +196,9 @@ void ProcessStateMachine_s(void)
 			}
 			if(flow_WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
-				SetRelayState(COMPRESSOR, 1);
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				SetRelayState(COMPRESSOR, OFF);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, OFF);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, OFF);
 				ChangeState(OFF_LOCKED);
 				ClearEventTimer_s();
 			}
@@ -209,14 +209,14 @@ void ProcessStateMachine_s(void)
 				//megaprintf("Heatpump OFF, was on for %d seconds\n", EventTimer_s);
 				ChangeState(OFF_COOLDOWN);
 				//megaprintf("Waiting for compressor cooldown for %ds\n", COMPRESSOR_COOLDOWN_PERIOD);
-				SetRelayState(COMPRESSOR, 1);				
+				SetRelayState(COMPRESSOR, OFF);				
 				ClearEventTimer_s();
 			}
 			if(flow_WaterFlowNominal()==0)	// Stop heatpump in case of insufficient flow
 			{
-				SetRelayState(COMPRESSOR, 1);
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				SetRelayState(COMPRESSOR, OFF);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, OFF);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, OFF);
 				ChangeState(OFF_LOCKED);
 				ClearEventTimer_s();
 			}
@@ -228,9 +228,9 @@ void ProcessStateMachine_s(void)
 				ClearEventTimer_s();
 			}else
 			{
-				SetRelayState(COMPRESSOR, 1);
-				SetRelayState(PRIMARY_CIRCULATION_PUMP, 1);
-				SetRelayState(SECONDARY_CIRCULATION_PUMP, 1);
+				SetRelayState(COMPRESSOR, OFF);
+				SetRelayState(PRIMARY_CIRCULATION_PUMP, OFF);
+				SetRelayState(SECONDARY_CIRCULATION_PUMP, OFF);
 			}
 			break;
 		case FATAL_ERROR:

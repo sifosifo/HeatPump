@@ -222,6 +222,7 @@ void can_rx_process(void)
 	crash_info.last_function = 11;
 	can_custom_t msg;
 	uint8_t tmp8;
+	uint8_t i;
 
 	while (rx_dequeue(&msg))
 	{
@@ -234,13 +235,18 @@ void can_rx_process(void)
 		case BASE_CAN_ID+GET_STATUS*2:		
 			msg.length = 3;
 			msg.data.byte[0] = POST_status;
-			msg.data.byte[1] = 0;//TODO update frame CurrentState;
+			msg.data.byte[1] = CurrentState;
 			msg.data.byte[2] = ActiveErrors;
 			can_send_message((can_t*)(&msg));
 			break;
 		case BASE_CAN_ID+DRIVE_OUTPUT*2:
+			DriveOutputsByCAN(msg.data.byte[0], msg.data.byte[1]);
 			msg.length = 1;
-			msg.data.byte[0] = DriveOutputsByCAN(msg.data.byte[0], msg.data.byte[1]);
+			msg.data.byte[0] = 0;	// clear response
+			for(i = 0; i < RELAY_COUNT; i++)	// cycle through all relays and report their state
+			{
+				msg.data.byte[0] |= GetRelayState(i)<<i;
+			}
 			can_send_message((can_t*)(&msg));
 			break;	
 		case BASE_CAN_ID+READ_PRIMARY*2:

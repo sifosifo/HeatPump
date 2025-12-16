@@ -31,6 +31,13 @@ typedef enum
 	ERR_TYPE_COUNT
 } err_type_t;
 
+typedef enum
+{
+	ON,
+	OFF,
+	RELAY_STATE_COUNT
+} rel_state_t;
+
 // This is the only thing modules like temperature.c are allowed to call
 typedef void (*error_detected_cb_t)(uint8_t error_code, uint8_t type);
 
