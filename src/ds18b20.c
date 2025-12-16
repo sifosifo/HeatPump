@@ -222,6 +222,7 @@ uint8_t _write_byte(const ds18b20_t *p, uint8_t data)	/* bytes are written LSB f
 				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
 				DDRA = DDRA & plow;
 				PORTA = PORTA | phigh;  // Enable internal pull-up
+				if(bit) _delay_us(Tslot - Tlow1);
 				break;
 #endif
 #ifdef PORTB
@@ -231,6 +232,7 @@ uint8_t _write_byte(const ds18b20_t *p, uint8_t data)	/* bytes are written LSB f
 				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
 				DDRB = DDRB & plow;
 				PORTB = PORTB | phigh;  // Enable internal pull-up
+				if(bit) _delay_us(Tslot - Tlow1);
 				break;
 #endif
 #ifdef PORTC
@@ -240,6 +242,7 @@ uint8_t _write_byte(const ds18b20_t *p, uint8_t data)	/* bytes are written LSB f
 				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
 				DDRC = DDRC & plow;
 				PORTC = PORTC | phigh;  // Enable internal pull-up
+				if(bit) _delay_us(Tslot - Tlow1);
 				break;
 #endif
 #ifdef PORTD
@@ -249,6 +252,7 @@ uint8_t _write_byte(const ds18b20_t *p, uint8_t data)	/* bytes are written LSB f
 				if(bit) _delay_us(Tlow1); else _delay_us(Tlow0);
 				DDRD = DDRD & plow;
 				PORTD = PORTD | phigh;  // Enable internal pull-up
+				if(bit) _delay_us(Tslot - Tlow1);
 				break;
 #endif
 			default:

@@ -80,7 +80,7 @@ uint8_t temp_GetHysteresisTemperature(void)
    ------------------------------------------------------------------ */
 void Init_Temperature(uint8_t error_sensor_id)
 {
-	crash_info.last_function = 27;
+	printf("Init_Temp\n");
 	if(error_sensor_id >= TEMPERATURE_SENSOR_COUNT)
 	{
 		notify_error(TEMPERATURE_SENSOR_COUNT, OTHER);

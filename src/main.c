@@ -88,21 +88,21 @@ static void on_event(uint8_t event_type, uint8_t current_state)
 }
 
 // State machine bussiness
-
+*/
 static inline const char *GetStateName(uint8_t s)
 {
 	if (s > FATAL_ERROR) return "UNKNOWN";
 	return (const char *)pgm_read_word(&state_names[s]);
-}*/
+}
 
 // Dedicated function for state changes with debug //megaprintf
 void ChangeState(uint8_t newState)
 {
 	crash_info.last_function = 1;
 	uint32_t now = timer_GetTimestamp_s();
-	//uint32_t spent    = now - StateEntryTime;
+	uint32_t spent    = now - StateEntryTime;
 
-	//megaprintf("STATE CHANGE: %s -> %s | spent %lu s | uptime %lu s\n", GetStateName(CurrentState), GetStateName(newState), (unsigned long)spent, (unsigned long)now);
+	printf("STATE CHANGE: %s -> %s | spent %lu s | uptime %lu s\n", GetStateName(CurrentState), GetStateName(newState), (unsigned long)spent, (unsigned long)now);
 	crash_info.last_state = CurrentState;
 	CurrentState = newState;
 	StateEntryTime = now;
@@ -293,31 +293,30 @@ void init(void)
 	wdt_disable();
 
 	can_save_crash(&crash_info);
-	crash_info.last_function = 4;
 	can_Init();	// Initialize CAN interface
 	
+	uart_init();
 	for (uint8_t i = 0; i < TEMPERATURE_SENSOR_COUNT; ++i) Init_Temperature(i);
 	temp_SetHysteresisTemperature(0);
 	temp_SetTargetTemperature(0);		// Set 0, which effectively disables it, needs to be started over CAN by setting correct value
 	MeasureTemperature();	// Do measurement to flush random values
 	_delay_ms(1000);			// Wait for sensors to stabilize
-	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup	
-	//megaprintf("Init_Temperature\n");
+	MeasureTemperature();	// Do initial measurement to avoid having random values after bootup
+	printf("Init_Temperature\n");
 
 	flow_Init();
-	//megaprintf("Init_WaterFlow\n");
+	printf("Init_WaterFlow\n");
 	
 	Init_Relays();
-	//megaprintf("Init_Relays\n");
+	printf("Init_Relays\n");
 	paint_stack();
 	sei();
-	uart_init();
 	
-	//megaprintf("--------------Booting----------------\n");
+	printf("--------------Booting----------------\n");
 	register_error_callback(on_error_detected);		// Register callbacks	
 	
 	timer_Init(&Task_1000ms);
-	//megaprintf("Init_Timer\n");	
+	printf("Init_Timer\n");	
 
 	wdt_enable(WDTO_2S);
 }
