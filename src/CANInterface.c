@@ -253,9 +253,20 @@ static uint8_t rx_dequeue(can_custom_t *out)
 }
 
 ISR(PCINT0_vect)
-{	
-	if (can_get_message((can_t*)(&msg_isr))) rx_enqueue(&msg_isr);
-	interrupt_storm_count++;
+{
+    interrupt_storm_count++;
+    
+    while (can_get_message((can_t*)(&msg_isr))) rx_enqueue(&msg_isr);	// Read all messages from CAN controller
+    
+    // Clear all flags
+    MCP2515_CS_PORT &= ~(1 << MCP2515_CS_PIN);
+    SPDR = 0x02;
+    while (!(SPSR & (1 << SPIF)));
+    SPDR = 0x2C;
+    while (!(SPSR & (1 << SPIF)));
+    SPDR = 0x00;
+    while (!(SPSR & (1 << SPIF)));
+    MCP2515_CS_PORT |= (1 << MCP2515_CS_PIN);
 }
 
 void can_save_crash(const crash_info_t *crash_info)
