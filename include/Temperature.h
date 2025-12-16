@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "ds18b20.h"
-#include "main.h"
 
 typedef enum { PRIMARY_SIDE_INLET, PRIMARY_SIDE_OUTLET,
 			   SECONDARY_SIDE_INLET, SECONDARY_SIDE_OUTLET,

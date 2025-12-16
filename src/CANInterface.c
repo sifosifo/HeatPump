@@ -6,13 +6,13 @@
 #include <avr/wdt.h>	// for WTD reset
 #include <util/delay.h>
 #include "can.h"
-#include "Temperature.h"
-#include "WaterFlow.h"
-#include "Relays.h"
-#include "main.h"
-#include "uart.h"
-#include "errors.h"
-#include "Timer.h"
+#include "Temperature.h"	// for temperature readings
+#include "WaterFlow.h"	// for flow readings
+#include "Relays.h"	// for relay states
+#include "main.h"	// for crash_info_t and current state
+#include "uart.h"	// for debug prints
+#include "errors.h"	// for error_Halt and error codes
+#include "Timer.h"	// for timer_get_ms
 
 typedef enum {RESERVED, DRIVE_OUTPUT, READ_PRIMARY, READ_SECONDARY, 
 	READ_TANK, READ_ENERGY, READ_COP, GET_STATUS, 
