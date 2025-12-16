@@ -369,12 +369,11 @@ int main(void)
 			uint8_t stack_usage_bytes[2];
 			stack_usage_bytes[0] = (uint8_t)(stack_usage >> 8);
 			stack_usage_bytes[1] = (uint8_t)(stack_usage & 0xFF);
-			can_SendMsg(BASE_CAN_ID - 1, stack_usage_bytes, 2);
+			can_SaveRAM(stack_usage_bytes);
 		}
 
 		timer_start_ms(1);		
-		can_process();	// Send error messages from queue
-		can_rx_process();	// Process received messages and send responses if needed
+		can_process();	// Send error messages from queue		
 		crash_info.sent = 1;
 		timer_stop_ms(1);
 	}	

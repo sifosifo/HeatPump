@@ -37,18 +37,15 @@ typedef struct
 
 } can_custom_t;
 
-static can_custom_t tx_queue[CAN_TX_QUEUE_SIZE];
+static volatile can_custom_t tx_queue[CAN_TX_QUEUE_SIZE];
 static volatile uint8_t tx_head = 0;
 static volatile uint8_t tx_tail = 0;
 static volatile uint8_t tx_count = 0;
 
-/* ---------------- RX queue ---------------- */
 static volatile can_custom_t rx_queue[CAN_RX_QUEUE_SIZE];
 static volatile uint8_t rx_head = 0;
 static volatile uint8_t rx_tail = 0;
 static volatile uint8_t rx_count = 0;
-
-void can_SendMsgRaw(const can_custom_t *msg);
 
 // -----------------------------------------------------------------------------
 /** Set filters and masks.
@@ -172,72 +169,144 @@ void force_reset()
     while (1);  
 }
 
-/* Called from ISR context: push received message to rx_queue.
-   If queue is full, newest message is dropped. */
-static void rx_enqueue_from_isr(const can_custom_t *m)
+void set_metadata(uint16_t id, uint8_t length, can_custom_t *msg)
 {
-	crash_info.last_function = 8;
-	uint8_t next = (rx_head + 1) % CAN_RX_QUEUE_SIZE;
-
-	/* if queue full (next == tail and count==full) -> drop */
-	if (rx_count >= CAN_RX_QUEUE_SIZE) {
-		// drop newest message; you could instead overwrite oldest by advancing tail
-		return;
-	}
-
-	/* copy into head */
-	rx_queue[rx_head] = *m; // struct copy is OK and fast here
-	rx_head = next;
-	rx_count++;
+	msg->id = id;
+	msg->length = length;
+	msg->flags.rtr = 0;
+	msg->flags.extended = 0;
 }
 
-/* Called from main loop: pop one message (returns 1 if popped) */
+void tx_enqueue(const can_custom_t *msg)
+{
+	cli();
+	if (tx_count < CAN_TX_QUEUE_SIZE)	// if queue not full
+	{
+		tx_queue[tx_head] = *msg; // struct copy
+		tx_head = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
+		tx_count++;
+	}
+	sei();   // re-enable interrupts
+}
+
+static uint8_t tx_dequeue(can_custom_t *out)
+{	
+	cli(); // protect indices/counter during modification
+	if (tx_count > 0)
+	{	
+	*out = tx_queue[tx_tail]; // struct copy
+	tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
+	tx_count--;
+	}else
+	{
+		sei();
+		return 0;
+	}
+	sei();
+
+	return 1;
+}
+
+static void rx_enqueue(const can_custom_t *msg)
+{	
+	cli();
+	if (rx_count < CAN_RX_QUEUE_SIZE)
+	{
+		rx_queue[rx_head] = *msg; // struct copy is OK and fast here
+		rx_head = (rx_head + 1) % CAN_RX_QUEUE_SIZE;
+		rx_count++;
+	}
+	sei();
+}
+
 static uint8_t rx_dequeue(can_custom_t *out)
 {
-	crash_info.last_function = 9;
-	if (rx_count == 0) return 0;
+	cli();
 
-	cli(); // protect indices/counter during modification
-	*out = rx_queue[rx_tail]; // struct copy
-	rx_tail = (rx_tail + 1) % CAN_RX_QUEUE_SIZE;
-	rx_count--;
+	if (rx_count > 0)
+	{
+		*out = rx_queue[rx_tail]; // struct copy
+		rx_tail = (rx_tail + 1) % CAN_RX_QUEUE_SIZE;
+		rx_count--;
+	}else
+	{
+		sei();
+		return 0;
+	}
 	sei();
 
 	return 1;
 }
 
 ISR(PCINT0_vect)
-{
-	crash_info.last_function = 10;
+{	
 	can_custom_t msg;
 	
-	if (can_get_message((can_t*)(&msg))) {
-        rx_enqueue_from_isr(&msg);
-    }
-	//printf("CAN isr\n");
+	if (can_get_message((can_t*)(&msg))) rx_enqueue(&msg);	
 }
 
-void can_rx_process(void)
+void can_save_crash(const crash_info_t *crash_info)
 {
-	crash_info.last_function = 11;
+	can_custom_t msg;
+
+	set_metadata(BASE_CAN_ID + READ_ERROR_HISTORY*2 + 1, 8, &msg);
+	msg.data.word[0] = crash_info->t1;
+	msg.data.word[1] = crash_info->t2;
+	msg.data.word[2] = crash_info->t3;
+	msg.data.byte[6] = crash_info->last_state;
+	tx_enqueue(&msg);
+}
+
+void can_SendErrorMsg(const uint8_t *data)
+{
+	can_custom_t msg;
+
+	set_metadata(BASE_CAN_ID + READ_ACTIVE_ERRORS*2 + 1, 8, &msg);		
+	memcpy(msg.data.byte, data, 8);
+	tx_enqueue(&msg);
+}
+
+void can_SaveRAM(const uint8_t *data)
+{
+	can_custom_t msg;
+
+	set_metadata(BASE_CAN_ID - 1, 2, &msg);		
+	memcpy(msg.data.byte, data, 2);
+	tx_enqueue(&msg);
+}
+
+void can_SendTimeMsg(void)
+{
+	can_custom_t msg;
+
+	set_metadata(BASE_CAN_ID + TIME*2 + 1, 6, &msg);
+	for(uint8_t i=0; i<3; i++)
+	{
+		msg.data.word[i] = timer_get_ms(i);
+	}	
+	tx_enqueue(&msg);
+}
+
+/* Call this from main loop as fast as possible */
+void can_process(void)
+{
 	can_custom_t msg;
 	uint8_t tmp8;
 	uint8_t i;
 
+	/* Process rx messages */
 	while (rx_dequeue(&msg))
-	{
-		printf("d");
+	{		
 		// Even ID is request, Odd ID is reply
-		// Request ID is BASE_CAN_ID + message_id * 2
-		// Response ID is simply incremented
-		switch(msg.id++)
+		// Request ID is BASE_CAN_ID + message_id * 2		
+		switch(msg.id++)	// Switch uses id, incremented id is used for response
 		{
 		case BASE_CAN_ID+GET_STATUS*2:		
 			msg.length = 3;
 			msg.data.byte[0] = POST_status;
 			msg.data.byte[1] = CurrentState;
 			msg.data.byte[2] = ActiveErrors;
-			can_send_message((can_t*)(&msg));
+			tx_enqueue(&msg);
 			break;
 		case BASE_CAN_ID+DRIVE_OUTPUT*2:
 			DriveOutputsByCAN(msg.data.byte[0], msg.data.byte[1]);
@@ -247,7 +316,7 @@ void can_rx_process(void)
 			{
 				msg.data.byte[0] |= GetRelayState(i)<<i;
 			}
-			can_send_message((can_t*)(&msg));
+			tx_enqueue(&msg);
 			break;	
 		case BASE_CAN_ID+READ_PRIMARY*2:
 			msg.length = 8;		
@@ -256,8 +325,7 @@ void can_rx_process(void)
 			msg.data.byte[4] = flow_GetFlow_dclmin(PRIMARY_SIDE);		
 			msg.data.word[3] = 0;
 			printf("e");
-			can_SendMsgRaw(&msg);
-			//can_send_message((can_t*)(&msg));
+			tx_enqueue(&msg);			
 			printf("f");
 			break;
 		case BASE_CAN_ID+READ_SECONDARY*2:
@@ -267,8 +335,7 @@ void can_rx_process(void)
 			msg.data.byte[4] = flow_GetFlow_dclmin(SECONDARY_SIDE);		
 			msg.data.word[3] = 0;
 			printf("g");
-			can_SendMsgRaw(&msg);
-			//can_send_message((can_t*)(&msg));
+			tx_enqueue(&msg);			
 			printf("h");
 			break;
 		case BASE_CAN_ID+READ_TANK*2:
@@ -276,7 +343,7 @@ void can_rx_process(void)
 			msg.data.word[0] = GetTemperature(TANK_TOP);
 			msg.data.word[1] = GetTemperature(TANK_BOTTOM);
 			printf("i");		
-			can_SendMsgRaw(&msg);
+			tx_enqueue(&msg);
 			printf("j");
 			break;
 		case BASE_CAN_ID+PARAMETERS*2:
@@ -302,110 +369,19 @@ void can_rx_process(void)
 			msg.length = 2;
 			msg.data.byte[0] = temp_GetTargetTemperature();
 			msg.data.byte[1] = temp_GetHysteresisTemperature();		
-			can_send_message((can_t*)(&msg));
+			tx_enqueue(&msg);
 			break;
 		default:
 			break;
 		}
 		printf("k");
 	}
-}
 
-void can_save_crash(crash_info_t *crash_info)
-{
-	can_SendMsg(BASE_CAN_ID + READ_ERROR_HISTORY*2 + 1, (uint8_t*)crash_info, 8);
-}
-
-void can_SendErrorMsg(const uint8_t *data)
-{
-	crash_info.last_function = 13;
-	can_SendMsg(BASE_CAN_ID + READ_ERROR_HISTORY*2 + 1, (uint8_t*)data, 8);
-}
-
-void can_SendTimeMsg(void)
-{
-	crash_info.last_function = 38;
-	uint8_t data[6];
-	uint16_t time_ms;
-
-	time_ms = timer_get_ms(0);
-	data[0] = (uint8_t)(time_ms >> 8);
-	data[1] = (uint8_t)(time_ms & 0xFF);
-	time_ms = timer_get_ms(1);
-	data[2] = (uint8_t)(time_ms >> 8);
-	data[3] = (uint8_t)(time_ms & 0xFF);
-	time_ms = timer_get_ms(2);
-	data[4] = (uint8_t)(time_ms >> 8);
-	data[5] = (uint8_t)(time_ms & 0xFF);
-	can_SendMsg(BASE_CAN_ID + TIME*2 + 1, data, 6);
-}
-
-void can_SendMsgRaw(const can_custom_t *msg)
-{
-	uint8_t next;
-
-	tx_queue[tx_head].id = msg->id;
-	tx_queue[tx_head].length = msg->length;
-
-	// if queue full -> drop
-	if (tx_count >= CAN_TX_QUEUE_SIZE) return;
-
-	// copy into current head slot (atomicize modifications)
-	cli();   // disable interrupts while we modify shared indices/counter
-	memcpy(tx_queue[tx_head].data.byte, msg->data.byte, msg->length);
-
-	next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
-	tx_head = next;
-	tx_count++;
-	sei();   // re-enable interrupts
-}
-
-void can_SendMsg(uint16_t can_id, const uint8_t *data, uint8_t length)
-{
-	crash_info.last_function = 37;
-	uint8_t next;
-
-	tx_queue[tx_head].id = can_id;
-	tx_queue[tx_head].length = length;
-
-	// if queue full -> drop
-	if (tx_count >= CAN_TX_QUEUE_SIZE) return;
-
-	// copy into current head slot (atomicize modifications)
-	cli();   // disable interrupts while we modify shared indices/counter
-	memcpy(tx_queue[tx_head].data.byte, data, length);
-
-	next = (tx_head + 1) % CAN_TX_QUEUE_SIZE;
-	tx_head = next;
-	tx_count++;
-	sei();   // re-enable interrupts
-}
-
-/* Call this from main loop as fast as possible */
-void can_process(void)
-{
-	crash_info.last_function = 14;
-	can_custom_t msg;
-
-	msg.id 				= tx_queue[tx_tail].id;
-	msg.length			= tx_queue[tx_tail].length;
-	msg.flags.extended 	= 0;
-	msg.flags.rtr 		= 0;
-
+	/* Process tx messages */
 	if (tx_count == 0) return;
 
-	if (can_check_free_buffer()) 
+	while(tx_dequeue(&msg) && can_check_free_buffer())	// Order matters here 
 	{
-		printf("b");
-		cli(); // protect tx_tail / tx_count
-		can_custom_t *f = &tx_queue[tx_tail];
-		// copy the slot into message payload
-		for (uint8_t i = 0; i < msg.length; i++) msg.data.byte[i] = f->data.byte[i];
-
-		tx_tail = (tx_tail + 1) % CAN_TX_QUEUE_SIZE;
-		tx_count--;
-		sei();
-		printf("x");
 		can_send_message((can_t*)(&msg));
 	}
 }

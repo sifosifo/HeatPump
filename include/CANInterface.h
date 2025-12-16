@@ -14,10 +14,9 @@
 #define MCP2515_CS_PIN   PB2
 
 uint8_t can_Init(void);
-void can_SendMsg(uint16_t can_id, const uint8_t *data, uint8_t length);
 void can_SendErrorMsg(const uint8_t *data);
+void can_SaveRAM(const uint8_t *data);
 void can_SendTimeMsg(void);
 void can_process(void);
-void can_rx_process(void);
-void can_save_crash(crash_info_t *crash_info);
+void can_save_crash(const crash_info_t *crash_info);
 #endif /* COMINTERFACE_H_ */
