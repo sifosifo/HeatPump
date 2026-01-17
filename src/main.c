@@ -368,6 +368,12 @@ int main(void)
 			stack_usage_bytes[0] = (uint8_t)(stack_usage >> 8);
 			stack_usage_bytes[1] = (uint8_t)(stack_usage & 0xFF);
 			can_SaveRAM(stack_usage_bytes);
+
+			uint32_t timestamp = timer_GetTimestamp_s();
+			if(timestamp % 3600 == 0)	// In future based on CAN silence timer
+			{
+				can_Init();	// Re-initialize CAN to recover from potential errors
+			}
 		}
 
 		timer_start_ms(1);		
